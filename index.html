@@ -38,6 +38,25 @@
   td{text-align:center;padding:6px 7px;border-bottom:1px solid #e6e9f0;white-space:nowrap}
   tr:nth-child(even) td{background:#f8f9fc}
   .hide{display:none}
+  #ov{position:fixed;inset:0;background:rgba(11,37,69,.55);display:none;align-items:center;justify-content:center;z-index:999}
+  #ov.show{display:flex}
+  #ovBox{background:#fff;border-top:5px solid var(--gold);padding:28px 40px;min-width:280px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.35);animation:pop .25s ease-out}
+  #ovBox h3{margin:14px 0 2px;color:var(--navy);letter-spacing:.5px}
+  #ovBox p{margin:0;color:#555;font-size:13px;font-weight:600}
+  .spin{width:56px;height:56px;margin:0 auto;border:6px solid #e3e8f1;border-top-color:var(--gold);border-right-color:var(--navy);border-radius:50%;animation:rot .8s linear infinite}
+  .dots::after{content:"";animation:dots 1.2s steps(4,end) infinite}
+  .tick,.cross{width:64px;height:64px;margin:0 auto;display:block}
+  .tick circle,.cross circle{fill:none;stroke-width:5;stroke-dasharray:166;stroke-dashoffset:166;animation:draw .6s ease-out forwards}
+  .tick circle{stroke:#0a7a2f}.cross circle{stroke:#b00020}
+  .tick path,.cross path{fill:none;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:50;stroke-dashoffset:50;animation:draw .4s .5s ease-out forwards}
+  .tick path{stroke:#0a7a2f}.cross path{stroke:#b00020}
+  #ovBox.okb h3{color:#0a7a2f}#ovBox.errb h3{color:#b00020}
+  #ovBox.okb{animation:pop .25s ease-out,bounce .5s .5s}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  @keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes bounce{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  @keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
   .pie{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:24px;border:1px solid var(--line);padding:12px;margin-bottom:14px;background:#fafbfd}
   .pie .pieh{width:100%;text-align:center;font-weight:700;color:var(--navy);font-size:14px;line-height:1.5;border-bottom:2px solid var(--gold);padding-bottom:6px}
   .pie .leg div{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:14px;font-weight:600}
@@ -59,6 +78,7 @@
 </style>
 </head>
 <body>
+<div id="ov"><div id="ovBox"></div></div>
 <header><h1>SECR RAIPUR DIVISION <small>| CREW ENTRY &amp; DASHBOARD</small></h1></header>
 
 <h2 class="fhead">RAILWAY BOARD SAFETY DRIVE- Daily Monitoring of BFT and BPT and One to One Crew Counselling</h2>
@@ -305,6 +325,25 @@ function lookupCms(id){
 typeSel.onchange = () => build(typeSel.value);
 $("clr").onclick = () => build(typeSel.value);
 
+/* ---- save overlay ---- */
+const ov = $("ov"), ovBox = $("ovBox");
+function ovSaving(){
+  ovBox.className = "";
+  ovBox.innerHTML = '<div class="spin"></div><h3>PLEASE WAIT<span class="dots"></span></h3><p>DATA SAVING</p>';
+  ov.classList.add("show");
+}
+function ovSaved(){
+  ovBox.className = "okb";
+  ovBox.innerHTML = '<svg class="tick" viewBox="0 0 52 52"><circle cx="26" cy="26" r="25"/><path d="M14 27 l8 8 l16 -17"/></svg><h3>DATA SAVED</h3><p>ENTRY SAVED SUCCESSFULLY</p>';
+  setTimeout(() => ov.classList.remove("show"), 1800);
+}
+function ovFailed(m){
+  ovBox.className = "errb";
+  ovBox.innerHTML = '<svg class="cross" viewBox="0 0 52 52"><circle cx="26" cy="26" r="25"/><path d="M17 17 l18 18 M35 17 l-18 18"/></svg><h3>SAVE FAILED</h3><p>' + esc(m) + '</p><button type="button" style="margin-top:14px" id="ovOk">OK</button>';
+  $("ovOk").onclick = () => ov.classList.remove("show");
+}
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
 /* ---- submit ---- */
 form.onsubmit = async e => {
   e.preventDefault();
@@ -312,14 +351,17 @@ form.onsubmit = async e => {
   const cid = (form.elements["CMS ID"].value || "").trim().toUpperCase();
   if (CREW_LIST.length && !CREW[cid]){ msg.className="msg err"; msg.textContent="SELECT A VALID CMS ID FROM THE LIST"; return; }
   const data = {}; new FormData(form).forEach((v,k) => data[k] = v);
-  const btn = $("sub"); btn.disabled = true; msg.className="msg"; msg.textContent="SAVING...";
+  const btn = $("sub"); btn.disabled = true; msg.className="msg"; msg.textContent="";
+  ovSaving();
   try{
     await fetch(API_URL, {method:"POST", mode:"no-cors",
       headers:{"Content-Type":"text/plain;charset=utf-8"},
       body: JSON.stringify({sheet: typeSel.value, data})});
-    msg.className="msg ok"; msg.textContent="SAVED TO " + typeSel.value + " SHEET";
-    build(typeSel.value); msg.className="msg ok"; msg.textContent="SAVED TO " + typeSel.value + " SHEET";
-  }catch(err){ msg.className="msg err"; msg.textContent="FAILED: " + err.message; }
+    await wait(700);
+    const sh = typeSel.value;
+    build(sh); msg.className="msg ok"; msg.textContent="SAVED TO " + sh + " SHEET";
+    ovSaved();
+  }catch(err){ msg.className="msg err"; msg.textContent="FAILED: " + err.message; ovFailed(err.message); }
   btn.disabled = false;
 };
 
