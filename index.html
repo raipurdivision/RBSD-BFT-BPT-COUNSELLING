@@ -281,13 +281,13 @@ function build(type){
       }
       const l = document.createElement("label");
       l.style.cssText = "display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;text-transform:uppercase";
-      l.innerHTML = `<input type="checkbox" name="${f.n}" style="width:22px;height:22px;padding:0;margin:0;cursor:pointer"> ${f.l || f.n}`;
+      l.innerHTML = `<input type="checkbox" name="${f.n}" checked style="width:22px;height:22px;padding:0;margin:0;cursor:pointer"> ${f.l || f.n}`;
       grp.querySelector(".cgrow").appendChild(l);
       return;
     }
     if (f.t === "check"){
       d.className = "full";
-      d.innerHTML = `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;text-transform:uppercase"><input type="checkbox" name="${f.n}" style="width:22px;height:22px;padding:0;margin:0;cursor:pointer"> ${f.l || f.n}</label>`;
+      d.innerHTML = `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;text-transform:uppercase"><input type="checkbox" name="${f.n}" checked style="width:22px;height:22px;padding:0;margin:0;cursor:pointer"> ${f.l || f.n}</label>`;
       fieldsDiv.appendChild(d);
       return;
     }
