@@ -37,6 +37,7 @@
   th{background:var(--navy);color:#fff;position:sticky;top:0;padding:7px;text-align:center;white-space:nowrap}
   td{text-align:center;padding:6px 7px;border-bottom:1px solid #e6e9f0;white-space:nowrap}
   tr:nth-child(even) td{background:#f8f9fc}
+  th.rm,td.rm{white-space:normal;word-wrap:break-word;overflow-wrap:anywhere;width:260px;min-width:200px;max-width:260px;text-align:left}
   .hide{display:none}
   #ov{position:fixed;inset:0;background:rgba(11,37,69,.55);display:none;align-items:center;justify-content:center;z-index:999}
   #ov.show{display:flex}
@@ -186,7 +187,7 @@
       <div class="tblwrap"><table><thead><tr><th>CLI NAME</th><th>COUNSELLING</th><th>BFT BPT</th><th>TOTAL</th></tr></thead><tbody id="doneBody"></tbody></table></div>
     </div>
     <div id="cons" class="hide">
-      <div style="margin-bottom:8px;font-weight:700;color:var(--navy)">CONSOLIDATE REPORT - DESIGNATION WISE CREW COVERAGE (COUNSELLING + BFT BPT)
+      <div style="margin-bottom:8px;font-weight:700;color:var(--navy)"><span id="consTitle">CONSOLIDATE REPORT - DESIGNATION WISE CREW COVERAGE</span>
         <button type="button" class="alt" id="consBack" style="margin-left:12px;padding:6px 14px">BACK TO ENTRIES</button></div>
       <div class="tblwrap"><table><thead><tr><th><select id="consCli"><option value="">-- ALL CLI --</option></select></th><th>LP</th><th>LP COVERED</th><th>LP UNCOVERED</th><th>ALP</th><th>ALP COVERED</th><th>ALP UNCOVERED</th><th>TOTAL CREW</th><th>CREW COVERED</th><th>CREW UNCOVERED</th></tr></thead><tbody id="consBody"></tbody></table></div>
     </div>
@@ -214,6 +215,9 @@ const FIELDS = {
     {n:"COUNSELLING TYPE", t:"select", o:["LOBBY","FP"]},
     {n:"DATE OF COUNSELLING", t:"date"},
     {n:"DONE BY CLI", t:"select", o:[]},
+    {n:"BFT", t:"check", g:"COUNSELLING DONE"},
+    {n:"BPT", t:"check", g:"COUNSELLING DONE"},
+    {n:"CONTINUITY", t:"check", g:"COUNSELLING DONE"},
     {n:"REMARKS", t:"area"}
   ],
   "BFT BPT": [
@@ -268,6 +272,25 @@ function build(type){
   (FIELDS[type] || []).forEach(f => {
     const d = document.createElement("div");
     if (f.t === "area") d.className = "full";
+    if (f.t === "check" && f.g){
+      let grp = fieldsDiv.querySelector('[data-grp="' + f.g + '"]');
+      if (!grp){
+        grp = document.createElement("div"); grp.className = "full"; grp.dataset.grp = f.g;
+        grp.innerHTML = `<label>${f.g}</label><div class="cgrow" style="display:flex;flex-wrap:wrap;gap:22px;margin-top:6px"></div>`;
+        fieldsDiv.appendChild(grp);
+      }
+      const l = document.createElement("label");
+      l.style.cssText = "display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;text-transform:uppercase";
+      l.innerHTML = `<input type="checkbox" name="${f.n}" style="width:22px;height:22px;padding:0;margin:0;cursor:pointer"> ${f.l || f.n}`;
+      grp.querySelector(".cgrow").appendChild(l);
+      return;
+    }
+    if (f.t === "check"){
+      d.className = "full";
+      d.innerHTML = `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;text-transform:uppercase"><input type="checkbox" name="${f.n}" style="width:22px;height:22px;padding:0;margin:0;cursor:pointer"> ${f.l || f.n}</label>`;
+      fieldsDiv.appendChild(d);
+      return;
+    }
     let inp;
     if (f.t === "select"){
       inp = document.createElement("select");
@@ -389,6 +412,10 @@ form.onsubmit = async e => {
   const cid = (form.elements["CMS ID"].value || "").trim().toUpperCase();
   if (CREW_LIST.length && !CREW[cid]){ msg.className="msg err"; msg.textContent="SELECT A VALID CMS ID FROM THE LIST"; return; }
   const data = {}; new FormData(form).forEach((v,k) => data[k] = v);
+  (FIELDS[typeSel.value] || []).filter(f => f.t === "check").forEach(f => {
+    const cb = form.elements[f.n];
+    data[f.n] = (cb && cb.checked) ? "YES" : "NO";
+  });
   const btn = $("sub"); btn.disabled = true; msg.className="msg"; msg.textContent="";
   ovSaving();
   try{
@@ -409,7 +436,7 @@ let rows = [], CUR = {headers:[], out:[], DK:""};
 const cellVal = (r,h,DK) => h === DK ? String(r[h] ?? "").slice(0,10) : String(r[h] ?? "");
 function reportTitle(){
   if (DET_ON) return DET_TITLE;
-  const f = [CONS_ON ? "CONSOLIDATE REPORT (COUNSELLING + BFT BPT)" : DONE_ON ? "DONE BY REPORT (COUNSELLING + BFT BPT)" : DATE_ON ? "SUMMARY - DATE WISE REPORT (COUNSELLING)" : $("dType").value];
+  const f = [CONS_ON ? "CONSOLIDATE REPORT (" + $("dType").value + ")" : DONE_ON ? "DONE BY REPORT (COUNSELLING + BFT BPT)" : DATE_ON ? "SUMMARY - DATE WISE REPORT (COUNSELLING)" : $("dType").value];
   if (CONS_ON) { if ($("consCli").value) f.push("CLI: " + $("consCli").value); }
   else if (!DONE_ON && $("dGroup").value) f.push("GROUP CLI: " + $("dGroup").value);
   if (!CONS_ON && !DATE_ON && $("dCli").value) f.push("DONE BY CLI: " + $("dCli").value);
@@ -433,7 +460,7 @@ function showDet(on){ DET_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = false; 
 function uncDetail(key, label){
   const list = (UNC_MAP[key] || []).slice().sort((a,b) => String(a.cli||"").localeCompare(String(b.cli||"")) || String(a.name||"").localeCompare(String(b.name||"")));
   const range = ($("dFrom").value || $("dTo").value) ? " | DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY") : "";
-  DET_TITLE = "UNCOVERED CREW DETAILS - " + label + " (" + list.length + ")" + range;
+  DET_TITLE = "UNCOVERED CREW DETAILS (" + $("dType").value + ") - " + label + " (" + list.length + ")" + range;
   $("detTitle").textContent = DET_TITLE;
   const cli = c => String(c.cli || "").trim() || "UNASSIGNED";
   $("detBody").innerHTML = list.length
@@ -538,7 +565,7 @@ async function consolidate(){
   if (!CREW_LIST.length){ dm.className="msg err"; dm.textContent="CREW LIST NOT LOADED - CHECK 'CREW DATA' SHEET"; return; }
   dm.className="msg"; dm.textContent="BUILDING CONSOLIDATE REPORT...";
   try{
-    const res = await Promise.all(["COUNSELLING","BFT BPT"].map(n => api(API_URL + "?sheet=" + encodeURIComponent(n))));
+    const res = await Promise.all([$("dType").value].map(n => api(API_URL + "?sheet=" + encodeURIComponent(n))));
     const from = $("dFrom").value, to = $("dTo").value;
     const csel = $("consCli"), keep = csel.value;
     const cnames = [...new Set(CREW_LIST.map(c => String(c.cli || "").trim() || "UNASSIGNED"))].sort();
@@ -601,6 +628,7 @@ async function consolidate(){
         "COVERED CREW IDS":o.cov.join(", "), "UNCOVERED CREW IDS":o.unc.join(", ")})),
       DK: ""
     };
+    $("consTitle").textContent = "CONSOLIDATE REPORT (" + $("dType").value + ") - DESIGNATION WISE CREW COVERAGE";
     showCons(true); dm.textContent = "";
   }catch(err){ dm.className="msg err"; dm.textContent="REPORT FAILED: " + err.message; }
 }
@@ -629,11 +657,11 @@ function exportPdf(){
     'h2{margin:0 0 1px;font-size:13px;color:#0b2545}p{margin:0 0 4px;font-size:9px;line-height:1.25}' +
     'table{border-collapse:collapse;width:100%;font-size:9px}th{background:#0b2545;color:#fff;padding:2px 3px;font-size:9px;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
     'td{text-align:center;border:1px solid #bbb;padding:1px 3px;font-size:9px;line-height:1.2;vertical-align:top}tr:nth-child(even) td{background:#f3f5f9;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-    'thead{display:table-header-group}tr{page-break-inside:avoid}</style></head><body>' +
+    'td.rm{text-align:left;white-space:normal;word-wrap:break-word;overflow-wrap:anywhere;width:30%}thead{display:table-header-group}tr{page-break-inside:avoid}</style></head><body>' +
     '<h2>SECR RAIPUR DIVISION - REPORT</h2><p>' + esc(reportTitle()) + '<br>TOTAL ENTRIES: ' + out.length +
     ' | GENERATED: ' + new Date().toLocaleString("en-IN") + '</p><table><thead><tr>' +
     headers.map(h => `<th>${esc(h)}</th>`).join("") + '</tr></thead><tbody>' +
-    out.map(r => "<tr>" + headers.map(h => `<td>${esc(cellVal(r,h,DK))}</td>`).join("") + "</tr>").join("") +
+    out.map(r => "<tr>" + headers.map(h => `<td${/REMARK/i.test(h) ? ' class="rm"' : ''}>${esc(cellVal(r,h,DK))}</td>`).join("") + "</tr>").join("") +
     '</tbody></table></body></html>');
   w.document.close(); w.focus();
   setTimeout(() => w.print(), 400);
@@ -729,9 +757,9 @@ function renderDash(headers){
     `<div class="stat"><b>${uniq(HK)}</b>HQ / LOBBY</div>`;
   CUR = {headers, out, DK};
   drawPie(out);
-  $("thead").innerHTML = "<tr>" + headers.map(h => `<th>${h}</th>`).join("") + "</tr>";
+  $("thead").innerHTML = "<tr>" + headers.map(h => `<th${/REMARK/i.test(h) ? ' class="rm"' : ''}>${h}</th>`).join("") + "</tr>";
   $("tbody").innerHTML = out.map(r =>
-    "<tr>" + headers.map(h => `<td>${esc(String(r[h] ?? "").slice(0,10) && h===DK ? String(r[h]).slice(0,10) : (r[h] ?? ""))}</td>`).join("") + "</tr>").join("");
+    "<tr>" + headers.map(h => `<td${/REMARK/i.test(h) ? ' class="rm"' : ''}>${esc(String(r[h] ?? "").slice(0,10) && h===DK ? String(r[h]).slice(0,10) : (r[h] ?? ""))}</td>`).join("") + "</tr>").join("");
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 $("dLoad").onclick = loadDash;
@@ -748,7 +776,8 @@ $("dateBack").onclick = () => { showDate(false); if (rows.length) renderDash(Obj
 $("doneBack").onclick = () => { showDone(false); if (rows.length) renderDash(Object.keys(rows[0])); };
 $("consCli").onchange = consolidate;
 $("consBack").onclick = () => { showCons(false); if (rows.length) renderDash(Object.keys(rows[0])); };
-$("dType").onchange = () => { $("dCli").value = ""; $("dGroup").value = ""; $("consCli").value = ""; loadDash(); };
+$("dType").onchange = () => { $("dCli").value = ""; $("dGroup").value = ""; $("consCli").value = "";
+  const wasCons = CONS_ON; loadDash().then(() => { if (wasCons) consolidate(); }); };
 loadCrew();
 ["dFrom","dTo"].forEach(id => $(id).oninput = refresh);
 </script>
