@@ -75,6 +75,44 @@
   .dd{position:absolute;top:100%;left:0;right:0;z-index:50;max-height:240px;overflow:auto;background:#fff;border:1px solid var(--navy);display:none;box-shadow:0 4px 10px rgba(0,0,0,.2)}
   .dd div{padding:7px 9px;cursor:pointer;font-size:13px;border-bottom:1px solid #eef}
   .dd div:hover{background:#fff4cc}
+
+  /* ===== MOBILE ===== */
+  @media (max-width:700px){
+    header{padding:10px 12px}
+    header h1{font-size:14px;line-height:1.3}
+    .fhead{font-size:14px;margin:10px 10px 0;padding-bottom:8px}
+    .tabs{margin:12px auto 0;padding:0 10px}
+    .tab{flex:1;text-align:center;padding:10px 6px;font-size:13px}
+    .wrap{padding:0 10px 30px}
+    .card{padding:12px}
+    input,select,textarea{font-size:16px;padding:10px}
+    .grid{grid-template-columns:1fr;gap:12px}
+    #form>div[style*="max-width:320px"]{max-width:none!important}
+    #f button{width:100%;margin:0 0 10px}
+    #f .msg{display:block;margin:6px 0 0}
+    .bar{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .bar>div{min-width:0}
+    .bar>div:has(button){grid-column:1/-1}
+    .bar button{width:100%;padding:11px 8px}
+    .stats{grid-template-columns:1fr 1fr;gap:8px}
+    .stat{padding:10px}
+    .stat b{font-size:20px}
+    .pie{flex-direction:column;gap:12px}
+    .pie .pieh{font-size:12px}
+    .tblwrap,body.full .tblwrap{max-height:65vh;-webkit-overflow-scrolling:touch}
+    table{font-size:12px}
+    th,td{padding:6px 5px}
+    .ids{max-width:200px;font-size:10px}
+    #cons>div:first-child,#done>div:first-child,#dateRep>div:first-child,#det>div:first-child{font-size:13px}
+    #cons .alt,#done .alt,#dateRep .alt,#det .alt{display:block;margin:8px 0 0!important;width:100%}
+    #dateRep .tblwrap{max-width:none!important}
+    #ovBox{min-width:0;width:80%;padding:22px 18px}
+    .msg{margin-left:0}
+  }
+  @media (max-width:380px){
+    .bar{grid-template-columns:1fr}
+    .stats{grid-template-columns:1fr}
+  }
 </style>
 </head>
 <body>
