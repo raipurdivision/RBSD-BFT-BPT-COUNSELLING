@@ -38,7 +38,7 @@
   td{text-align:center;padding:6px 7px;border-bottom:1px solid #e6e9f0;white-space:nowrap}
   tr:nth-child(even) td{background:#f8f9fc}
   th.rm,td.rm{white-space:normal;word-wrap:break-word;overflow-wrap:anywhere;width:260px;min-width:200px;max-width:260px;text-align:left}
-  .hide{display:none}
+  .hide{display:none!important}
   #ov{position:fixed;inset:0;background:rgba(11,37,69,.55);display:none;align-items:center;justify-content:center;z-index:999}
   #ov.show{display:flex}
   #ovBox{background:#fff;border-top:5px solid var(--gold);padding:28px 40px;min-width:280px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.35);animation:pop .25s ease-out}
@@ -64,6 +64,11 @@
   .pie .leg i{display:inline-block;width:14px;height:14px}
   .fhead{margin:14px 16px 0;padding:0 0 10px;font-size:18px;line-height:1.35;color:var(--navy);text-align:center;border-bottom:3px solid var(--gold)}
   .bar button.cn{background:#6a1b9a}
+  .pie .barbox{text-align:center}
+  .pie .barbox svg{max-width:100%;height:auto}
+  .pie button.pd{background:#b00020;padding:6px 14px;margin-top:6px}
+  #cliw tr.tot td{background:#fff4cc!important;font-weight:700}
+  #cliw td b{font-size:15px}
   th select{width:auto;min-width:150px;padding:4px;font-size:12px;font-weight:700;color:var(--navy)}
   .lnk{color:#b00020;cursor:pointer;text-decoration:underline;font-size:15px;font-weight:700}
   .ids{font-size:11px;font-weight:400;color:#555;white-space:normal;max-width:420px;margin-top:2px}
@@ -73,6 +78,15 @@
   body.full .tabs,body.full .wrap{max-width:none}
   body.full .tblwrap{max-height:calc(100vh - 340px);min-height:300px}
   .bar button.xl{background:#1d6f42}.bar button.pd{background:#b00020}
+  .tkw{background:#1b2a3a;padding:6px 0}
+  .tkl{color:var(--gold);font-weight:700;font-size:6px;letter-spacing:.5px;padding:0 8px 3px;font-family:Consolas,monospace}
+  .tkr{overflow:hidden;background:#142130;border:1px solid #26384c;border-radius:3px;margin:0 6px 5px;padding:4px 0}
+  .tkr:last-child{margin-bottom:0}
+  .tkt{display:flex;width:max-content;animation:tk var(--d,40s) linear infinite}
+  .tkr:hover .tkt{animation-play-state:paused}
+  .tki{display:flex;align-items:center;gap:5px;padding:0 11px;color:#e8edf3;font-family:Consolas,'Courier New',monospace;font-size:8px;white-space:nowrap}
+  .tki i{display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;border-radius:50%;background:#e8a000;color:#1b2a3a;font-style:normal;font-weight:700;font-size:7px}
+  @keyframes tk{to{transform:translateX(-50%)}}
   .dd{position:absolute;top:100%;left:0;right:0;z-index:50;max-height:240px;overflow:auto;background:#fff;border:1px solid var(--navy);display:none;box-shadow:0 4px 10px rgba(0,0,0,.2)}
   .dd div{padding:7px 9px;cursor:pointer;font-size:13px;border-bottom:1px solid #eef}
   .dd div:hover{background:#fff4cc}
@@ -104,8 +118,8 @@
     table{font-size:12px}
     th,td{padding:6px 5px}
     .ids{max-width:200px;font-size:10px}
-    #cons>div:first-child,#done>div:first-child,#dateRep>div:first-child,#det>div:first-child{font-size:13px}
-    #cons .alt,#done .alt,#dateRep .alt,#det .alt{display:block;margin:8px 0 0!important;width:100%}
+    #cons>div:first-child,#done>div:first-child,#dateRep>div:first-child,#det>div:first-child,#cliw>div:first-child{font-size:13px}
+    #cons .alt,#done .alt,#dateRep .alt,#det .alt,#cliw .alt,#cliw .pd{display:block;margin:8px 0 0!important;width:100%}
     #dateRep .tblwrap{max-width:none!important}
     #ovBox{min-width:0;width:80%;padding:22px 18px}
     .msg{margin-left:0}
@@ -121,6 +135,8 @@
 <header><h1>SECR RAIPUR DIVISION <small>| CREW ENTRY &amp; DASHBOARD</small></h1></header>
 
 <h2 class="fhead">RAILWAY BOARD SAFETY DRIVE- Daily Monitoring of BFT and BPT and One to One Crew Counselling</h2>
+
+<div id="cliwTick" style="margin:12px 16px 0"></div>
 
 <div class="tabs">
   <div class="tab active" data-t="form">ENTRY FORM</div>
@@ -167,6 +183,7 @@
       <div><button id="dCons" type="button" class="cn">CONSOLIDATE REPORT</button></div>
       <div><button id="dDone" type="button" class="cn" style="background:#00695c">DONE BY REPORT</button></div>
       <div><button id="dDate" type="button" class="cn" style="background:#ef6c00">DATE WISE REPORT</button></div>
+      <div><button id="dCliW" type="button" class="cn" style="background:#283593">CLI WISE REPORT</button></div>
     </div>
     <div id="pie" class="pie"></div>
     <div class="stats" id="stats"></div>
@@ -180,6 +197,13 @@
       <div style="margin-bottom:8px;font-weight:700;color:var(--navy)"><span id="detTitle">UNCOVERED CREW DETAILS</span>
         <button type="button" class="alt" id="detBack" style="margin-left:12px;padding:6px 14px">BACK TO CONSOLIDATE REPORT</button></div>
       <div class="tblwrap"><table><thead><tr><th>S.NO</th><th>CREW NAME</th><th>HQ</th><th>DESIGNATION</th><th>CMS ID</th><th>CLI NAME</th></tr></thead><tbody id="detBody"></tbody></table></div>
+    </div>
+    <div id="cliw" class="hide">
+      <div style="margin-bottom:8px;font-weight:700;color:var(--navy)"><span id="cliwTitle">CLI WISE REPORT - NO. OF COUNSELLING DONE BY EACH CLI (DESCENDING)</span>
+        <button type="button" class="alt" id="cliwBack" style="margin-left:12px;padding:6px 14px">BACK TO ENTRIES</button>
+        <button type="button" class="pd" id="cliwPdf" style="margin-left:8px;padding:6px 14px;background:#b00020">GENERATE PDF</button></div>
+      <div class="tblwrap" style="max-width:640px"><table><thead><tr><th>S.NO</th><th>CLI NAME</th><th>COUNSELLING DONE</th></tr></thead><tbody id="cliwBody"></tbody></table></div>
+      <div id="cliwMsgs" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:16px"></div>
     </div>
     <div id="done" class="hide">
       <div style="margin-bottom:8px;font-weight:700;color:var(--navy)">DONE BY REPORT - NO. OF TIMES EACH CLI NAME IS REPEATED (DONE BY CLI)
@@ -330,6 +354,7 @@ async function loadCrew(){
       el.value = v;
     });
     CREW_LIST.forEach(c => CREW[String(c.id).toUpperCase()] = c);
+    loadTicker();
     if (!CREW_LIST.length){
       st.className = "err";
       st.textContent = (j.error || "NO CREW DATA") + " - REDEPLOY Code.gs AS NEW VERSION & CHECK 'CREW DATA' SHEET";
@@ -431,14 +456,15 @@ form.onsubmit = async e => {
 };
 
 /* ---- dashboard ---- */
+let CLIW_ON = false, BAR = null;
 let CONS_ON = false, DONE_ON = false, DATE_ON = false, DET_ON = false, DET_TITLE = "", UNC_MAP = {};
 let rows = [], CUR = {headers:[], out:[], DK:""};
 const cellVal = (r,h,DK) => h === DK ? String(r[h] ?? "").slice(0,10) : String(r[h] ?? "");
 function reportTitle(){
   if (DET_ON) return DET_TITLE;
-  const f = [CONS_ON ? "CONSOLIDATE REPORT (" + $("dType").value + ")" : DONE_ON ? "DONE BY REPORT (COUNSELLING + BFT BPT)" : DATE_ON ? "SUMMARY - DATE WISE REPORT (COUNSELLING)" : $("dType").value];
+  const f = [CONS_ON ? "CONSOLIDATE REPORT (" + $("dType").value + ")" : DONE_ON ? "DONE BY REPORT (COUNSELLING + BFT BPT)" : DATE_ON ? "SUMMARY - DATE WISE REPORT (COUNSELLING)" : CLIW_ON ? "CLI WISE REPORT - COUNSELLING DONE BY CLI (DESCENDING)" : $("dType").value];
   if (CONS_ON) { if ($("consCli").value) f.push("CLI: " + $("consCli").value); }
-  else if (!DONE_ON && $("dGroup").value) f.push("GROUP CLI: " + $("dGroup").value);
+  else if (!DONE_ON && !CLIW_ON && $("dGroup").value) f.push("GROUP CLI: " + $("dGroup").value);
   if (!CONS_ON && !DATE_ON && $("dCli").value) f.push("DONE BY CLI: " + $("dCli").value);
   if ($("dFrom").value || $("dTo").value) f.push("DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY"));
   return f.join(" | ");
@@ -448,15 +474,101 @@ function applyView(){
   $("done").classList.toggle("hide", !DONE_ON);
   $("dateRep").classList.toggle("hide", !DATE_ON);
   $("det").classList.toggle("hide", !DET_ON);
-  const any = CONS_ON || DONE_ON || DATE_ON || DET_ON;
+  $("cliw").classList.toggle("hide", !CLIW_ON);
+  const any = CONS_ON || DONE_ON || DATE_ON || DET_ON || CLIW_ON;
   $("stats").classList.toggle("hide", any);
   $("pie").classList.toggle("hide", any);
   $("tblwrap").classList.toggle("hide", any);
 }
-function showCons(on){ CONS_ON = on; if (on) DONE_ON = DATE_ON = DET_ON = false; applyView(); }
-function showDone(on){ DONE_ON = on; if (on) CONS_ON = DATE_ON = DET_ON = false; applyView(); }
-function showDate(on){ DATE_ON = on; if (on) CONS_ON = DONE_ON = DET_ON = false; applyView(); }
-function showDet(on){ DET_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = false; applyView(); }
+function showCons(on){ CONS_ON = on; if (on) DONE_ON = DATE_ON = DET_ON = CLIW_ON = false; applyView(); }
+function showDone(on){ DONE_ON = on; if (on) CONS_ON = DATE_ON = DET_ON = CLIW_ON = false; applyView(); }
+function showDate(on){ DATE_ON = on; if (on) CONS_ON = DONE_ON = DET_ON = CLIW_ON = false; applyView(); }
+function showDet(on){ DET_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = CLIW_ON = false; applyView(); }
+function showCliw(on){ CLIW_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = DET_ON = false; applyView(); }
+function cliList(j, from, to, sel){
+  const rs = j.rows || [];
+  const hs = j.headers || Object.keys(rs[0] || {});
+  const DK = hs.find(h => h.indexOf("DATE") > -1) || "TIMESTAMP";
+  const g = {};
+  CLI_LIST.forEach(n => { const nm = String(n).trim(); if (nm && (!sel || nm.toUpperCase() === sel)) g[nm.toUpperCase()] = {name:nm, n:0}; });
+  rs.forEach(r => {
+    const d = String(r[DK] || "").slice(0,10);
+    if (d && ((from && d < from) || (to && d > to))) return;
+    const nm = String(r["DONE BY CLI"] || "").trim(); if (!nm) return;
+    const k = nm.toUpperCase(); if (sel && k !== sel) return;
+    (g[k] || (g[k] = {name:nm, n:0})).n++;
+  });
+  return Object.values(g).sort((a,b) => b.n - a.n || a.name.localeCompare(b.name));
+}
+function cliMsg(sheet, list, from, to){
+  const today = new Date().toISOString().slice(0,10);
+  const total = list.reduce((a,o) => a + o.n, 0);
+  return "*SECR RAIPUR DIVISION*\n*CLI WISE REPORT - " + sheet + "*\n" +
+    "AS ON: " + ddmmyyyy(today) + "\n" +
+    "PERIOD: " + (from || to ? (from ? ddmmyyyy(from) : "START") + " TO " + (to ? ddmmyyyy(to) : "TODAY") : "ALL DATES") + "\n" +
+    "(NO. OF " + sheet + " DONE BY CLI - DESCENDING)\n\n" +
+    (list.length ? list.map((o,i) => (i+1) + ". " + o.name + " - *" + o.n + "*").join("\n") : "NO DATA") +
+    "\n\n*TOTAL: " + total + "*";
+}
+function ticker(items){
+  $("cliwTick").innerHTML = '<div class="tkw">' + items.map(it => {
+    const one = it.list.length ? it.list.map((o,i) => `<span class="tki"><i>${i+1}</i>${esc(o.name)} &mdash; ${o.n} entries</span>`).join("") : '<span class="tki">NO DATA</span>';
+    const dur = Math.max(20, it.list.length * 4);
+    return `<div class="tkl">${esc(it.sheet)}</div><div class="tkr"><div class="tkt" style="--d:${dur}s"><div class="tkh" style="display:flex">${one}</div><div class="tkh" style="display:flex">${one}</div></div></div>`;
+  }).join("") + '</div>';
+  /* repeat each half until it is wider than the screen so the loop has no gap */
+  document.querySelectorAll("#cliwTick .tkt").forEach(t => {
+    const hs = t.querySelectorAll(".tkh"), base = hs[0].innerHTML, w = hs[0].scrollWidth || 1;
+    const n = Math.max(1, Math.ceil((t.parentElement.clientWidth || 1200) / w));
+    if (n > 1){ const rep = base.repeat(n); hs[0].innerHTML = rep; hs[1].innerHTML = rep; }
+  });
+}
+async function loadTicker(){
+  if (API_URL.startsWith("PASTE")) return;
+  try{
+    const names = ["COUNSELLING","BFT BPT"];
+    const res = await Promise.all(names.map(n => api(API_URL + "?sheet=" + encodeURIComponent(n))));
+    const from = $("dFrom").value, to = $("dTo").value;
+    ticker(names.map((n,i) => ({sheet:n, list:cliList(res[i], from, to, "")})));
+  }catch(err){ $("cliwTick").innerHTML = ""; }
+}
+function msgBlocks(items){
+  $("cliwMsgs").innerHTML = items.map((it,i) =>
+    `<div style="flex:1;min-width:280px"><label>${esc(it.sheet)} - MESSAGE</label>` +
+    `<textarea id="cm${i}" readonly style="min-height:260px;font-family:Consolas,monospace;font-size:13px">${esc(it.text)}</textarea>` +
+    `<div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="copyMsg(${i})">COPY</button>` +
+    `<button type="button" style="background:#25D366" onclick="waMsg(${i})">SEND ON WHATSAPP</button></div></div>`).join("");
+}
+function copyMsg(i){
+  const t = $("cm" + i); t.select();
+  (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).catch(() => document.execCommand("copy"));
+  $("dmsg").className = "msg ok"; $("dmsg").textContent = "MESSAGE COPIED";
+}
+function waMsg(i){ window.open("https://wa.me/?text=" + encodeURIComponent($("cm" + i).value), "_blank"); }
+async function cliWise(){
+  const dm = $("dmsg");
+  dm.className="msg"; dm.textContent="BUILDING CLI WISE REPORT...";
+  try{
+    const names = ["COUNSELLING","BFT BPT"];
+    const res = await Promise.all(names.map(n => api(API_URL + "?sheet=" + encodeURIComponent(n))));
+    const from = $("dFrom").value, to = $("dTo").value, sel = $("dCli").value.trim().toUpperCase();
+    const lists = res.map(j => cliList(j, from, to, sel));
+    const list = lists[0];
+    const total = list.reduce((a,o) => a + o.n, 0);
+    $("cliwBody").innerHTML = list.length
+      ? list.map((o,i) => `<tr><td>${i+1}</td><td><b>${esc(o.name)}</b></td><td><b>${o.n}</b></td></tr>`).join("") +
+        `<tr class="tot"><td></td><td><b>GRAND TOTAL</b></td><td><b>${total}</b></td></tr>`
+      : '<tr><td colspan="3">NO DATA</td></tr>';
+    msgBlocks(names.map((n,i) => ({sheet:n, text:cliMsg(n, lists[i], from, to)})));
+    CUR = {
+      headers: ["S.NO","CLI NAME","COUNSELLING DONE"],
+      out: list.map((o,i) => ({"S.NO":i+1, "CLI NAME":o.name, "COUNSELLING DONE":o.n}))
+        .concat(list.length ? [{"S.NO":"", "CLI NAME":"GRAND TOTAL", "COUNSELLING DONE":total}] : []),
+      DK: ""
+    };
+    showCliw(true); dm.textContent = "";
+  }catch(err){ dm.className="msg err"; dm.textContent="REPORT FAILED: " + err.message; }
+}
 function uncDetail(key, label){
   const list = (UNC_MAP[key] || []).slice().sort((a,b) => String(a.cli||"").localeCompare(String(b.cli||"")) || String(a.name||"").localeCompare(String(b.name||"")));
   const range = ($("dFrom").value || $("dTo").value) ? " | DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY") : "";
@@ -632,11 +744,11 @@ async function consolidate(){
     showCons(true); dm.textContent = "";
   }catch(err){ dm.className="msg err"; dm.textContent="REPORT FAILED: " + err.message; }
 }
-const refresh = () => (CONS_ON || DET_ON) ? consolidate() : DONE_ON ? doneBy() : DATE_ON ? dateWise() : (rows.length && renderDash(Object.keys(rows[0])));
+const refresh = () => (CONS_ON || DET_ON) ? consolidate() : CLIW_ON ? cliWise() : DONE_ON ? doneBy() : DATE_ON ? dateWise() : (rows.length && renderDash(Object.keys(rows[0])));
 function exportExcel(){
   const {headers, out, DK} = CUR;
   if (!out.length){ $("dmsg").className="msg err"; $("dmsg").textContent="NO DATA TO EXPORT"; return; }
-  const fname = (DET_ON ? "UNCOVERED_CREW" : CONS_ON ? "CONSOLIDATE_REPORT" : DONE_ON ? "DONE_BY_REPORT" : DATE_ON ? "DATE_WISE_REPORT" : $("dType").value).replace(/\s+/g,"_") + "_" + new Date().toISOString().slice(0,10);
+  const fname = (DET_ON ? "UNCOVERED_CREW" : CONS_ON ? "CONSOLIDATE_REPORT" : DONE_ON ? "DONE_BY_REPORT" : DATE_ON ? "DATE_WISE_REPORT" : CLIW_ON ? "CLI_WISE_REPORT" : $("dType").value).replace(/\s+/g,"_") + "_" + new Date().toISOString().slice(0,10);
   const html = '<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body><table border="1">' +
     '<tr><td colspan="' + headers.length + '"><b>' + esc(reportTitle()) + '</b></td></tr>' +
     '<tr>' + headers.map(h => `<th style="background:#0b2545;color:#fff;text-align:center">${esc(h)}</th>`).join("") + '</tr>' +
@@ -667,7 +779,7 @@ function exportPdf(){
   setTimeout(() => w.print(), 400);
 }
 async function loadDash(){
-  CONS_ON = false; DONE_ON = false; DATE_ON = false; DET_ON = false; applyView();
+  CONS_ON = false; DONE_ON = false; DATE_ON = false; DET_ON = false; CLIW_ON = false; applyView();
   if (API_URL.startsWith("PASTE")) { $("dmsg").className="msg err"; $("dmsg").textContent="SET API_URL FIRST"; return; }
   $("dmsg").className="msg"; $("dmsg").textContent="LOADING...";
   try{
@@ -693,6 +805,38 @@ function fillGroupFilter(data){
     [...names].sort().map(n => `<option>${esc(n)}</option>`).join("");
   sel.value = keep;
 }
+function barSvg(d){
+  const W = 470, H = 250, L = 30, B = 50, T = 38, bw = 44, gap = 26;
+  const mx = Math.max(...d.map(x => x.v), 1), ph = H - B - T;
+  let s = `<div class="barbox"><svg id="barSvg" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Arial,sans-serif">` +
+    `<line x1="${L}" y1="${H-B}" x2="${W-6}" y2="${H-B}" stroke="#888"/>`;
+  d.forEach((x,i) => {
+    const h = Math.round(x.v / mx * ph), px = L + gap/2 + i * (bw + gap), y = H - B - h, cx = px + bw/2;
+    const w = x.l.split(" ");
+    s += `<rect x="${px}" y="${y}" width="${bw}" height="${h}" fill="${x.c}"/>` +
+      `<text x="${cx}" y="${y-5}" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b">${x.v}</text>` +
+      (x.p !== undefined ? `<text x="${cx}" y="${y-19}" text-anchor="middle" font-size="11" font-weight="700" fill="#2e7d32">${x.p}%</text>` : "") +
+      `<text x="${cx}" y="${H-B+14}" text-anchor="middle" font-size="10" font-weight="700" fill="#0b2545">${esc(w[0])}</text>` +
+      `<text x="${cx}" y="${H-B+27}" text-anchor="middle" font-size="10" font-weight="700" fill="#0b2545">${esc(w.slice(1).join(" "))}</text>`;
+  });
+  return s + `</svg><div><button type="button" class="pd" onclick="exportBarPdf()">BAR CHART PDF</button></div></div>`;
+}
+function exportBarPdf(){
+  if (!BAR){ $("dmsg").className="msg err"; $("dmsg").textContent="NO CHART DATA"; return; }
+  const w = window.open("", "_blank");
+  if (!w){ $("dmsg").className="msg err"; $("dmsg").textContent="ALLOW POP-UPS TO GENERATE PDF"; return; }
+  const svg = $("barSvg").outerHTML.replace(/width="470" height="250"/, 'width="760" height="410"');
+  w.document.write('<html><head><meta charset="UTF-8"><title>CREW COVERAGE BAR CHART</title><style>' +
+    '@page{size:A4 landscape;margin:8mm}body{font-family:Arial,sans-serif;margin:0;text-align:center}' +
+    'h2{margin:0 0 2px;font-size:15px;color:#0b2545}p{margin:0 0 8px;font-size:11px}' +
+    'table{border-collapse:collapse;margin:8px auto 0;font-size:11px}th{background:#0b2545;color:#fff;padding:3px 10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    'td{border:1px solid #bbb;padding:2px 10px}svg rect{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>' +
+    '<h2>SECR RAIPUR DIVISION - CREW COVERAGE BAR CHART</h2><p>' + esc(BAR.head) + '<br>GENERATED: ' + new Date().toLocaleString("en-IN") + '</p>' + svg +
+    '<table><thead><tr><th>PARTICULARS</th><th>COUNT</th><th>PERCENTAGE</th></tr></thead><tbody>' +
+    BAR.d.map(x => `<tr><td>${esc(x.l)}</td><td><b>${x.v}</b></td><td>${x.p !== undefined ? x.p + "%" : "-"}</td></tr>`).join("") + '</tbody></table></body></html>');
+  w.document.close(); w.focus();
+  setTimeout(() => w.print(), 400);
+}
 function drawPie(out){
   const grp = $("dGroup").value.trim().toUpperCase();
   const crew = CREW_LIST.filter(c => !grp || String(c.cli || "").trim().toUpperCase() === grp);
@@ -706,6 +850,7 @@ function drawPie(out){
   const ds = rows.map(r => String(r[DK] || "").slice(0,10)).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
   const from = $("dFrom").value || ds[0] || today, to = $("dTo").value || today;
   const head = `<div class="pieh">AS ON ${ddmmyyyy(today)}<br>REPORT FROM ${ddmmyyyy(from)} TO ${ddmmyyyy(to)} (${esc($("dType").value)}${grp ? " | GROUP CLI: " + esc($("dGroup").value) : ""})</div>`;
+  BAR = null;
   if (!total){ $("pie").innerHTML = head + '<div style="color:#b00020;font-weight:700">CREW LIST NOT LOADED</div>'; return; }
   const R = 90, CX = 100, CY = 100, COL = {c:"#2e7d32", u:"#c62828"};
   const pct = x => Math.round(x * 1000 / total) / 10;
@@ -724,10 +869,22 @@ function drawPie(out){
     if (u / total > 0.06) svg += lab(a + (2*Math.PI - a) / 2, pct(u) + "%");
   }
   svg += `</svg>`;
-  $("pie").innerHTML = head + svg +
+  const catOf = des => { des = String(des || "").toUpperCase(); return des.includes("ALP") ? "alp" : des.includes("LP") ? "lp" : null; };
+  const pc = (a,b) => b ? Math.round(a * 1000 / b) / 10 : 0;
+  let tLp = 0, cLp = 0, tAlp = 0, cAlp = 0;
+  crew.forEach(x => { const k = catOf(x.designation); if (!k) return;
+    const isC = cov.has(String(x.id).trim().toUpperCase());
+    if (k === "lp"){ tLp++; if (isC) cLp++; } else { tAlp++; if (isC) cAlp++; } });
+  BAR = {head: `AS ON ${ddmmyyyy(today)} | REPORT FROM ${ddmmyyyy(from)} TO ${ddmmyyyy(to)} (${$("dType").value}${grp ? " | GROUP CLI: " + $("dGroup").value : ""})`,
+    d: [{l:"TOTAL CREW",v:total,c:"#0b2545"},{l:"CREW COVERED",v:c,c:"#2e7d32",p:pc(c,total)},
+        {l:"TOTAL LP",v:tLp,c:"#0b2545"},{l:"LP COVERED",v:cLp,c:"#2e7d32",p:pc(cLp,tLp)},
+        {l:"TOTAL ALP",v:tAlp,c:"#0b2545"},{l:"ALP COVERED",v:cAlp,c:"#2e7d32",p:pc(cAlp,tAlp)}]};
+  $("pie").innerHTML = head + svg + barSvg(BAR.d) +
     `<div class="leg"><div><i style="background:#0b2545"></i>TOTAL CREW: <b>${total}</b></div>` +
     `<div><i style="background:${COL.c}"></i>TOTAL COVERED: <b>${c}</b> (${pct(c)}%)</div>` +
-    `<div><i style="background:${COL.u}"></i>TOTAL UNCOVERED: <b>${u}</b> (${pct(u)}%)</div></div>`;
+    `<div><i style="background:${COL.u}"></i>TOTAL UNCOVERED: <b>${u}</b> (${pct(u)}%)</div>` +
+    `<div><i style="background:#2e7d32"></i>LP COVERED: <b>${cLp}</b> / ${tLp} (${pc(cLp,tLp)}%)</div>` +
+    `<div><i style="background:#2e7d32"></i>ALP COVERED: <b>${cAlp}</b> / ${tAlp} (${pc(cAlp,tAlp)}%)</div></div>`;
 }
 function renderDash(headers){
   const from = $("dFrom").value, to = $("dTo").value, grp = $("dGroup").value;
@@ -772,6 +929,9 @@ $("dDone").onclick = doneBy;
 $("consBody").onclick = e => { const t = e.target.closest(".lnk"); if (t) uncDetail(t.dataset.k, t.dataset.l); };
 $("detBack").onclick = consolidate;
 $("dDate").onclick = dateWise;
+$("dCliW").onclick = cliWise;
+$("cliwPdf").onclick = exportPdf;
+$("cliwBack").onclick = () => { showCliw(false); if (rows.length) renderDash(Object.keys(rows[0])); };
 $("dateBack").onclick = () => { showDate(false); if (rows.length) renderDash(Object.keys(rows[0])); };
 $("doneBack").onclick = () => { showDone(false); if (rows.length) renderDash(Object.keys(rows[0])); };
 $("consCli").onchange = consolidate;
@@ -779,7 +939,7 @@ $("consBack").onclick = () => { showCons(false); if (rows.length) renderDash(Obj
 $("dType").onchange = () => { $("dCli").value = ""; $("dGroup").value = ""; $("consCli").value = "";
   const wasCons = CONS_ON; loadDash().then(() => { if (wasCons) consolidate(); }); };
 loadCrew();
-["dFrom","dTo"].forEach(id => $(id).oninput = refresh);
+["dFrom","dTo"].forEach(id => $(id).oninput = () => { refresh(); loadTicker(); });
 </script>
 </body>
 </html>
