@@ -74,6 +74,8 @@
   .ids{font-size:11px;font-weight:400;color:#555;white-space:normal;max-width:420px;margin-top:2px}
   #cons td b,#done td b,#dateRep td b{font-size:15px}
   #dateRep tr.rem td{background:#fff!important;border:2px solid #000;font-weight:700;font-size:15px}
+  #hqw tr.tot td{background:#fff4cc!important;font-weight:700}
+  #hqw td b{font-size:15px}
   #cons tr.tot td,#done tr.tot td,#dateRep tr.tot td{background:#fff4cc!important;font-weight:700}
   body.full .tabs,body.full .wrap{max-width:none}
   body.full .tblwrap{max-height:calc(100vh - 340px);min-height:300px}
@@ -184,6 +186,7 @@
       <div><button id="dDone" type="button" class="cn" style="background:#00695c">DONE BY REPORT</button></div>
       <div><button id="dDate" type="button" class="cn" style="background:#ef6c00">DATE WISE REPORT</button></div>
       <div><button id="dCliW" type="button" class="cn" style="background:#283593">CLI WISE REPORT</button></div>
+      <div><button id="dHq" type="button" class="cn" style="background:#00838f">HQ WISE DATA</button></div>
     </div>
     <div id="pie" class="pie"></div>
     <div class="stats" id="stats"></div>
@@ -195,7 +198,7 @@
     </div>
     <div id="det" class="hide">
       <div style="margin-bottom:8px;font-weight:700;color:var(--navy)"><span id="detTitle">UNCOVERED CREW DETAILS</span>
-        <button type="button" class="alt" id="detBack" style="margin-left:12px;padding:6px 14px">BACK TO CONSOLIDATE REPORT</button></div>
+        <button type="button" class="alt" id="detBack" style="margin-left:12px;padding:6px 14px">BACK</button></div>
       <div class="tblwrap"><table><thead><tr><th>S.NO</th><th>CREW NAME</th><th>HQ</th><th>DESIGNATION</th><th>CMS ID</th><th>CLI NAME</th></tr></thead><tbody id="detBody"></tbody></table></div>
     </div>
     <div id="cliw" class="hide">
@@ -209,6 +212,11 @@
       <div style="margin-bottom:8px;font-weight:700;color:var(--navy)">DONE BY REPORT - NO. OF TIMES EACH CLI NAME IS REPEATED (DONE BY CLI)
         <button type="button" class="alt" id="doneBack" style="margin-left:12px;padding:6px 14px">BACK TO ENTRIES</button></div>
       <div class="tblwrap"><table><thead><tr><th>CLI NAME</th><th>COUNSELLING</th><th>BFT BPT</th><th>TOTAL</th></tr></thead><tbody id="doneBody"></tbody></table></div>
+    </div>
+    <div id="hqw" class="hide">
+      <div style="margin-bottom:8px;font-weight:700;color:var(--navy)"><span id="hqTitle">HQ WISE DATA - CREW COVERAGE</span>
+        <button type="button" class="alt" id="hqBack" style="margin-left:12px;padding:6px 14px">BACK TO ENTRIES</button></div>
+      <div class="tblwrap"><table><thead><tr><th>S.NO</th><th>HQ</th><th>TOTAL CREW</th><th>CREW COVERED</th><th>CREW UNCOVERED</th><th>TOTAL LP</th><th>LP COVERED</th><th>LP UNCOVERED</th><th>TOTAL ALP</th><th>ALP COVERED</th><th>ALP UNCOVERED</th></tr></thead><tbody id="hqBody"></tbody></table></div>
     </div>
     <div id="cons" class="hide">
       <div style="margin-bottom:8px;font-weight:700;color:var(--navy)"><span id="consTitle">CONSOLIDATE REPORT - DESIGNATION WISE CREW COVERAGE</span>
@@ -457,11 +465,12 @@ form.onsubmit = async e => {
 
 /* ---- dashboard ---- */
 let CLIW_ON = false, BAR = null;
-let CONS_ON = false, DONE_ON = false, DATE_ON = false, DET_ON = false, DET_TITLE = "", UNC_MAP = {};
+let CONS_ON = false, DONE_ON = false, DATE_ON = false, DET_ON = false, DET_TITLE = "", UNC_MAP = {}, HQ_ON = false, DET_FROM = "cons";
 let rows = [], CUR = {headers:[], out:[], DK:""};
 const cellVal = (r,h,DK) => h === DK ? String(r[h] ?? "").slice(0,10) : String(r[h] ?? "");
 function reportTitle(){
   if (DET_ON) return DET_TITLE;
+  if (HQ_ON) return "HQ WISE DATA (" + $("dType").value + ") - CREW COVERAGE" + (($("dFrom").value || $("dTo").value) ? " | DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY") : "");
   const f = [CONS_ON ? "CONSOLIDATE REPORT (" + $("dType").value + ")" : DONE_ON ? "DONE BY REPORT (COUNSELLING + BFT BPT)" : DATE_ON ? "SUMMARY - DATE WISE REPORT (COUNSELLING)" : CLIW_ON ? "CLI WISE REPORT - COUNSELLING DONE BY CLI (DESCENDING)" : $("dType").value];
   if (CONS_ON) { if ($("consCli").value) f.push("CLI: " + $("consCli").value); }
   else if (!DONE_ON && !CLIW_ON && $("dGroup").value) f.push("GROUP CLI: " + $("dGroup").value);
@@ -475,16 +484,18 @@ function applyView(){
   $("dateRep").classList.toggle("hide", !DATE_ON);
   $("det").classList.toggle("hide", !DET_ON);
   $("cliw").classList.toggle("hide", !CLIW_ON);
-  const any = CONS_ON || DONE_ON || DATE_ON || DET_ON || CLIW_ON;
+  $("hqw").classList.toggle("hide", !HQ_ON);
+  const any = CONS_ON || DONE_ON || DATE_ON || DET_ON || CLIW_ON || HQ_ON;
   $("stats").classList.toggle("hide", any);
   $("pie").classList.toggle("hide", any);
   $("tblwrap").classList.toggle("hide", any);
 }
-function showCons(on){ CONS_ON = on; if (on) DONE_ON = DATE_ON = DET_ON = CLIW_ON = false; applyView(); }
-function showDone(on){ DONE_ON = on; if (on) CONS_ON = DATE_ON = DET_ON = CLIW_ON = false; applyView(); }
-function showDate(on){ DATE_ON = on; if (on) CONS_ON = DONE_ON = DET_ON = CLIW_ON = false; applyView(); }
-function showDet(on){ DET_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = CLIW_ON = false; applyView(); }
-function showCliw(on){ CLIW_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = DET_ON = false; applyView(); }
+function showCons(on){ CONS_ON = on; if (on) DONE_ON = DATE_ON = DET_ON = CLIW_ON = HQ_ON = false; applyView(); }
+function showDone(on){ DONE_ON = on; if (on) CONS_ON = DATE_ON = DET_ON = CLIW_ON = HQ_ON = false; applyView(); }
+function showDate(on){ DATE_ON = on; if (on) CONS_ON = DONE_ON = DET_ON = CLIW_ON = HQ_ON = false; applyView(); }
+function showDet(on){ DET_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = CLIW_ON = HQ_ON = false; applyView(); }
+function showCliw(on){ CLIW_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = DET_ON = HQ_ON = false; applyView(); }
+function showHq(on){ HQ_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = DET_ON = CLIW_ON = false; applyView(); }
 function cliList(j, from, to, sel){
   const rs = j.rows || [];
   const hs = j.headers || Object.keys(rs[0] || {});
@@ -569,7 +580,8 @@ async function cliWise(){
     showCliw(true); dm.textContent = "";
   }catch(err){ dm.className="msg err"; dm.textContent="REPORT FAILED: " + err.message; }
 }
-function uncDetail(key, label){
+function uncDetail(key, label, from){
+  DET_FROM = from || "cons";
   const list = (UNC_MAP[key] || []).slice().sort((a,b) => String(a.cli||"").localeCompare(String(b.cli||"")) || String(a.name||"").localeCompare(String(b.name||"")));
   const range = ($("dFrom").value || $("dTo").value) ? " | DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY") : "";
   DET_TITLE = "UNCOVERED CREW DETAILS (" + $("dType").value + ") - " + label + " (" + list.length + ")" + range;
@@ -672,6 +684,68 @@ async function doneBy(){
     showDone(true); dm.textContent = "";
   }catch(err){ dm.className="msg err"; dm.textContent="REPORT FAILED: " + err.message; }
 }
+async function hqWise(){
+  const dm = $("dmsg");
+  if (!CREW_LIST.length){ dm.className="msg err"; dm.textContent="CREW LIST NOT LOADED - CHECK 'CREW DATA' SHEET"; return; }
+  dm.className="msg"; dm.textContent="BUILDING HQ WISE DATA...";
+  try{
+    const j = await api(API_URL + "?sheet=" + encodeURIComponent($("dType").value));
+    const from = $("dFrom").value, to = $("dTo").value;
+    const seen = new Set();
+    const rs = j.rows || [];
+    const hs = j.headers || Object.keys(rs[0] || {});
+    const DK = hs.find(h => h.indexOf("DATE") > -1) || "TIMESTAMP";
+    rs.forEach(r => {
+      const d = String(r[DK] || "").slice(0,10);
+      if (d && ((from && d < from) || (to && d > to))) return;
+      const id = String(r["CMS ID"] || "").trim().toUpperCase();
+      if (id) seen.add(id);
+    });
+    const mk = name => ({name, all:{c:0,u:0}, lp:{c:0,u:0}, alp:{c:0,u:0}, uo:[], ulp:[], ualp:[]});
+    const g = {};
+    CREW_LIST.forEach(c => {
+      const nm = String(c.hq || "").trim().toUpperCase() || "HQ NOT SET";
+      const o = g[nm] || (g[nm] = mk(nm));
+      const covered = seen.has(String(c.id).trim().toUpperCase());
+      const w = covered ? "c" : "u";
+      o.all[w]++;
+      if (!covered) o.uo.push(c);
+      const des = String(c.designation || "").toUpperCase();
+      const k = des.includes("ALP") ? "alp" : des.includes("LP") ? "lp" : null;
+      if (k){ o[k][w]++; if (!covered) (k === "lp" ? o.ulp : o.ualp).push(c); }
+    });
+    const list = Object.values(g).sort((a,b) => a.name.localeCompare(b.name));
+    const tot = mk("GRAND TOTAL");
+    list.forEach(o => {
+      ["all","lp","alp"].forEach(k => { tot[k].c += o[k].c; tot[k].u += o[k].u; });
+      tot.uo.push(...o.uo); tot.ulp.push(...o.ulp); tot.ualp.push(...o.ualp);
+    });
+    UNC_MAP = {};
+    list.forEach(o => { const K = o.name; UNC_MAP["HQ|" + K + "|ALL"] = o.uo; UNC_MAP["HQ|" + K + "|LP"] = o.ulp; UNC_MAP["HQ|" + K + "|ALP"] = o.ualp; });
+    UNC_MAP["HQ|__ALL__|ALL"] = tot.uo; UNC_MAP["HQ|__ALL__|LP"] = tot.ulp; UNC_MAP["HQ|__ALL__|ALP"] = tot.ualp;
+    const lk = (o, grp, cnt, lbl) => cnt
+      ? `<td><span class="lnk" data-k="HQ|${esc(o === tot ? "__ALL__" : o.name)}|${grp}" data-l="${esc(o.name + " - " + lbl)}" title="CLICK FOR FULL DETAILS">${cnt}</span></td>`
+      : `<td><b>0</b></td>`;
+    const n = x => `<td><b>${x}</b></td>`;
+    const tr = (o, i, cls) => `<tr class="${cls||""}"><td>${i}</td><td><b>${esc(o.name)}</b></td>` +
+      n(o.all.c + o.all.u) + n(o.all.c) + lk(o,"ALL",o.all.u,"CREW") +
+      n(o.lp.c + o.lp.u) + n(o.lp.c) + lk(o,"LP",o.lp.u,"LP") +
+      n(o.alp.c + o.alp.u) + n(o.alp.c) + lk(o,"ALP",o.alp.u,"ALP") + `</tr>`;
+    $("hqBody").innerHTML = list.length ? list.map((o,i) => tr(o, i+1)).join("") + (list.length > 1 ? tr(tot, "", "tot") : "")
+      : '<tr><td colspan="11">NO DATA</td></tr>';
+    const rowsOut = list.length > 1 ? list.concat([tot]) : list;
+    CUR = {
+      headers: ["S.NO","HQ","TOTAL CREW","CREW COVERED","CREW UNCOVERED","TOTAL LP","LP COVERED","LP UNCOVERED","TOTAL ALP","ALP COVERED","ALP UNCOVERED"],
+      out: rowsOut.map((o,i) => ({"S.NO": o === tot ? "" : i+1, "HQ":o.name,
+        "TOTAL CREW":o.all.c+o.all.u, "CREW COVERED":o.all.c, "CREW UNCOVERED":o.all.u,
+        "TOTAL LP":o.lp.c+o.lp.u, "LP COVERED":o.lp.c, "LP UNCOVERED":o.lp.u,
+        "TOTAL ALP":o.alp.c+o.alp.u, "ALP COVERED":o.alp.c, "ALP UNCOVERED":o.alp.u})),
+      DK: ""
+    };
+    $("hqTitle").textContent = "HQ WISE DATA (" + $("dType").value + ") - CREW COVERAGE";
+    showHq(true); dm.textContent = "";
+  }catch(err){ dm.className="msg err"; dm.textContent="REPORT FAILED: " + err.message; }
+}
 async function consolidate(){
   const dm = $("dmsg");
   if (!CREW_LIST.length){ dm.className="msg err"; dm.textContent="CREW LIST NOT LOADED - CHECK 'CREW DATA' SHEET"; return; }
@@ -744,11 +818,11 @@ async function consolidate(){
     showCons(true); dm.textContent = "";
   }catch(err){ dm.className="msg err"; dm.textContent="REPORT FAILED: " + err.message; }
 }
-const refresh = () => (CONS_ON || DET_ON) ? consolidate() : CLIW_ON ? cliWise() : DONE_ON ? doneBy() : DATE_ON ? dateWise() : (rows.length && renderDash(Object.keys(rows[0])));
+const refresh = () => HQ_ON ? hqWise() : (CONS_ON || DET_ON) ? (DET_FROM === "hq" ? hqWise() : consolidate()) : CLIW_ON ? cliWise() : DONE_ON ? doneBy() : DATE_ON ? dateWise() : (rows.length && renderDash(Object.keys(rows[0])));
 function exportExcel(){
   const {headers, out, DK} = CUR;
   if (!out.length){ $("dmsg").className="msg err"; $("dmsg").textContent="NO DATA TO EXPORT"; return; }
-  const fname = (DET_ON ? "UNCOVERED_CREW" : CONS_ON ? "CONSOLIDATE_REPORT" : DONE_ON ? "DONE_BY_REPORT" : DATE_ON ? "DATE_WISE_REPORT" : CLIW_ON ? "CLI_WISE_REPORT" : $("dType").value).replace(/\s+/g,"_") + "_" + new Date().toISOString().slice(0,10);
+  const fname = (DET_ON ? "UNCOVERED_CREW" : HQ_ON ? "HQ_WISE_DATA" : CONS_ON ? "CONSOLIDATE_REPORT" : DONE_ON ? "DONE_BY_REPORT" : DATE_ON ? "DATE_WISE_REPORT" : CLIW_ON ? "CLI_WISE_REPORT" : $("dType").value).replace(/\s+/g,"_") + "_" + new Date().toISOString().slice(0,10);
   const html = '<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body><table border="1">' +
     '<tr><td colspan="' + headers.length + '"><b>' + esc(reportTitle()) + '</b></td></tr>' +
     '<tr>' + headers.map(h => `<th style="background:#0b2545;color:#fff;text-align:center">${esc(h)}</th>`).join("") + '</tr>' +
@@ -779,7 +853,7 @@ function exportPdf(){
   setTimeout(() => w.print(), 400);
 }
 async function loadDash(){
-  CONS_ON = false; DONE_ON = false; DATE_ON = false; DET_ON = false; CLIW_ON = false; applyView();
+  CONS_ON = false; DONE_ON = false; DATE_ON = false; DET_ON = false; CLIW_ON = false; HQ_ON = false; applyView();
   if (API_URL.startsWith("PASTE")) { $("dmsg").className="msg err"; $("dmsg").textContent="SET API_URL FIRST"; return; }
   $("dmsg").className="msg"; $("dmsg").textContent="LOADING...";
   try{
@@ -926,10 +1000,13 @@ $("dGroup").onchange = refresh;
 $("dCli").onchange = refresh;
 $("dCons").onclick = consolidate;
 $("dDone").onclick = doneBy;
-$("consBody").onclick = e => { const t = e.target.closest(".lnk"); if (t) uncDetail(t.dataset.k, t.dataset.l); };
-$("detBack").onclick = consolidate;
+$("consBody").onclick = e => { const t = e.target.closest(".lnk"); if (t) uncDetail(t.dataset.k, t.dataset.l, "cons"); };
+$("detBack").onclick = () => DET_FROM === "hq" ? hqWise() : consolidate();
 $("dDate").onclick = dateWise;
 $("dCliW").onclick = cliWise;
+$("dHq").onclick = hqWise;
+$("hqBack").onclick = () => { showHq(false); if (rows.length) renderDash(Object.keys(rows[0])); };
+$("hqBody").onclick = e => { const t = e.target.closest(".lnk"); if (t) uncDetail(t.dataset.k, t.dataset.l, "hq"); };
 $("cliwPdf").onclick = exportPdf;
 $("cliwBack").onclick = () => { showCliw(false); if (rows.length) renderDash(Object.keys(rows[0])); };
 $("dateBack").onclick = () => { showDate(false); if (rows.length) renderDash(Object.keys(rows[0])); };
@@ -937,7 +1014,7 @@ $("doneBack").onclick = () => { showDone(false); if (rows.length) renderDash(Obj
 $("consCli").onchange = consolidate;
 $("consBack").onclick = () => { showCons(false); if (rows.length) renderDash(Object.keys(rows[0])); };
 $("dType").onchange = () => { $("dCli").value = ""; $("dGroup").value = ""; $("consCli").value = "";
-  const wasCons = CONS_ON; loadDash().then(() => { if (wasCons) consolidate(); }); };
+  const wasCons = CONS_ON, wasHq = HQ_ON; loadDash().then(() => { if (wasCons) consolidate(); if (wasHq) hqWise(); }); };
 loadCrew();
 ["dFrom","dTo"].forEach(id => $(id).oninput = () => { refresh(); loadTicker(); });
 </script>
