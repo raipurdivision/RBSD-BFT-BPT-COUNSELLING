@@ -76,6 +76,8 @@
   #dateRep tr.rem td{background:#fff!important;border:2px solid #000;font-weight:700;font-size:15px}
   #hqw tr.tot td{background:#fff4cc!important;font-weight:700}
   #hqw td b{font-size:15px}
+  #hqw tr.hq td{background:var(--hc)}
+  #hqw tr td.pc{background:#ffeb3b!important;color:#0b2545}
   #cons tr.tot td,#done tr.tot td,#dateRep tr.tot td{background:#fff4cc!important;font-weight:700}
   body.full .tabs,body.full .wrap{max-width:none}
   body.full .tblwrap{max-height:calc(100vh - 340px);min-height:300px}
@@ -216,7 +218,8 @@
     <div id="hqw" class="hide">
       <div style="margin-bottom:8px;font-weight:700;color:var(--navy)"><span id="hqTitle">HQ WISE DATA - CREW COVERAGE</span>
         <button type="button" class="alt" id="hqBack" style="margin-left:12px;padding:6px 14px">BACK TO ENTRIES</button></div>
-      <div class="tblwrap"><table><thead><tr><th>S.NO</th><th>HQ</th><th>TOTAL CREW</th><th>CREW COVERED</th><th>CREW UNCOVERED</th><th>TOTAL LP</th><th>LP COVERED</th><th>LP UNCOVERED</th><th>TOTAL ALP</th><th>ALP COVERED</th><th>ALP UNCOVERED</th></tr></thead><tbody id="hqBody"></tbody></table></div>
+      <div id="hqChart" class="pie" style="display:block;overflow:auto"></div>
+      <div class="tblwrap"><table><thead><tr><th>S.NO</th><th>HQ</th><th>TOTAL CREW</th><th>CREW COVERED</th><th>CREW UNCOVERED</th><th>CREW COVERED %</th><th>TOTAL LP</th><th>LP COVERED</th><th>LP UNCOVERED</th><th>LP COVERED %</th><th>TOTAL ALP</th><th>ALP COVERED</th><th>ALP UNCOVERED</th><th>ALP COVERED %</th></tr></thead><tbody id="hqBody"></tbody></table></div>
     </div>
     <div id="cons" class="hide">
       <div style="margin-bottom:8px;font-weight:700;color:var(--navy)"><span id="consTitle">CONSOLIDATE REPORT - DESIGNATION WISE CREW COVERAGE</span>
@@ -684,6 +687,62 @@ async function doneBy(){
     showDone(true); dm.textContent = "";
   }catch(err){ dm.className="msg err"; dm.textContent="REPORT FAILED: " + err.message; }
 }
+let HQBAR = null;
+const HQ_COL = {all:"#0b2545", lp:"#2e7d32", alp:"#ef6c00"};
+function hqBarSvg(big){
+  const d = HQBAR.list, n = d.length;
+  const pdf = big === "pdf", gw = pdf ? 100 : 170, L = 50, T = 34, B = pdf ? 46 : 80, H = pdf ? 250 : big ? 480 : 440, W = Math.max(L + n * gw + 30, pdf ? 700 : big ? 900 : 640);
+  const ph = H - T - B;
+  let s = `<svg id="hqSvg" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Arial,sans-serif">`;
+  [0,25,50,75,100].forEach(v => {
+    const y = T + ph - v / 100 * ph;
+    s += `<line x1="${L}" y1="${y}" x2="${W-10}" y2="${y}" stroke="${v ? "#e0e4ec" : "#888"}"/><text x="${L-5}" y="${y+4}" text-anchor="end" font-size="11" fill="#555">${v}%</text>`;
+  });
+  d.forEach((x,i) => {
+    const gx = L + (pdf ? 8 : 20) + i * gw, bw = pdf ? 26 : 40;
+    [["all",x.all],["lp",x.lp],["alp",x.alp]].forEach(([k,v],j) => {
+      const h = Math.round(v / 100 * ph), bx = gx + j * (bw + (pdf ? 4 : 8)), y = T + ph - h;
+      s += `<rect x="${bx}" y="${y}" width="${bw}" height="${h}" fill="${HQ_COL[k]}"/>` +
+           `<text x="${bx + bw/2}" y="${y-4}" text-anchor="middle" font-size="${pdf ? 7 : 9}" font-weight="700" fill="#1b1b1b">${v}%</text>`;
+    });
+    const cx = gx + (pdf ? 42 : 68), w = x.name.length > 16 ? x.name.slice(0,15) + "." : x.name;
+    s += `<text x="${cx}" y="${T+ph+(pdf ? 18 : 24)}" text-anchor="middle" font-size="13" font-weight="700" fill="#0b2545">${esc(w)}</text>`;
+  });
+  return s + `</svg>`;
+}
+function drawHqChart(){
+  if (!HQBAR || !HQBAR.list.length){ $("hqChart").innerHTML = ""; return; }
+  const lg = [["all","CREW COVERED %"],["lp","LP COVERED %"],["alp","ALP COVERED %"]].map(([k,l]) =>
+    `<span style="display:inline-flex;align-items:center;gap:6px;margin:0 12px;font-weight:700;font-size:13px"><i style="display:inline-block;width:14px;height:14px;background:${HQ_COL[k]}"></i>${l}</span>`).join("");
+  $("hqChart").innerHTML = `<div class="pieh">HQ WISE COVERAGE % - BAR CHART<br><span style="font-weight:600;font-size:12px">${esc(HQBAR.head)}</span></div>` +
+    `<div style="text-align:center;margin:8px 0">${lg}</div><div style="overflow:auto;text-align:center">${hqBarSvg(false)}</div>` +
+    `<div style="text-align:center"><button type="button" class="pd" onclick="exportHqBarPdf()">BAR CHART PDF</button></div>`;
+}
+function hqChartPdf(){
+  const lg = [["all","CREW COVERED %"],["lp","LP COVERED %"],["alp","ALP COVERED %"]].map(([k,l]) =>
+    `<span style="margin:0 10px;font-weight:700;font-size:11px"><i style="display:inline-block;width:12px;height:12px;background:${HQ_COL[k]};vertical-align:middle;margin-right:4px"></i>${l}</span>`).join("");
+  return '<div class="hqc"><div style="margin:2px 0">' + lg + '</div>' + hqBarSvg("pdf") + '</div>';
+}
+function exportHqBarPdf(){
+  if (!HQBAR){ $("dmsg").className="msg err"; $("dmsg").textContent="NO CHART DATA"; return; }
+  const w = window.open("", "_blank");
+  if (!w){ $("dmsg").className="msg err"; $("dmsg").textContent="ALLOW POP-UPS TO GENERATE PDF"; return; }
+  const lg = [["all","CREW COVERED %"],["lp","LP COVERED %"],["alp","ALP COVERED %"]].map(([k,l]) =>
+    `<span style="margin:0 10px;font-weight:700"><i style="display:inline-block;width:12px;height:12px;background:${HQ_COL[k]};vertical-align:middle;margin-right:4px"></i>${l}</span>`).join("");
+  w.document.write('<html><head><meta charset="UTF-8"><title>HQ WISE COVERAGE BAR CHART</title><style>' +
+    '@page{size:A4 landscape;margin:8mm}body{font-family:Arial,sans-serif;margin:0;text-align:center}' +
+    'h2{margin:0 0 2px;font-size:15px;color:#0b2545}p{margin:0 0 8px;font-size:11px}' +
+    'svg{max-width:100%;height:auto;margin-top:6px}svg rect,i{-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    'table{border-collapse:collapse;margin:8px auto 0;font-size:10px}th{background:#0b2545;color:#fff;padding:3px 8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    'td{border:1px solid #bbb;padding:2px 8px}</style></head><body>' +
+    '<h2>SECR RAIPUR DIVISION - HQ WISE COVERAGE BAR CHART</h2><p>' + esc(HQBAR.head) + '<br>GENERATED: ' + new Date().toLocaleString("en-IN") + '</p>' +
+    '<div>' + lg + '</div>' + hqBarSvg(true) +
+    '<table><thead><tr><th>HQ</th><th>CREW COVERED</th><th>%</th><th>LP COVERED</th><th>%</th><th>ALP COVERED</th><th>%</th></tr></thead><tbody>' +
+    HQBAR.list.map(x => `<tr><td><b>${esc(x.name)}</b></td><td>${x.ac}/${x.at}</td><td>${x.all}%</td><td>${x.lc}/${x.lt}</td><td>${x.lp}%</td><td>${x.pc}/${x.pt}</td><td>${x.alp}%</td></tr>`).join("") +
+    '</tbody></table></body></html>');
+  w.document.close(); w.focus();
+  setTimeout(() => w.print(), 400);
+}
 async function hqWise(){
   const dm = $("dmsg");
   if (!CREW_LIST.length){ dm.className="msg err"; dm.textContent="CREW LIST NOT LOADED - CHECK 'CREW DATA' SHEET"; return; }
@@ -727,22 +786,29 @@ async function hqWise(){
       ? `<td><span class="lnk" data-k="HQ|${esc(o === tot ? "__ALL__" : o.name)}|${grp}" data-l="${esc(o.name + " - " + lbl)}" title="CLICK FOR FULL DETAILS">${cnt}</span></td>`
       : `<td><b>0</b></td>`;
     const n = x => `<td><b>${x}</b></td>`;
-    const tr = (o, i, cls) => `<tr class="${cls||""}"><td>${i}</td><td><b>${esc(o.name)}</b></td>` +
-      n(o.all.c + o.all.u) + n(o.all.c) + lk(o,"ALL",o.all.u,"CREW") +
-      n(o.lp.c + o.lp.u) + n(o.lp.c) + lk(o,"LP",o.lp.u,"LP") +
-      n(o.alp.c + o.alp.u) + n(o.alp.c) + lk(o,"ALP",o.alp.u,"ALP") + `</tr>`;
+    const pct = (a,b) => b ? Math.round(a * 1000 / b) / 10 : 0;
+    const pcl = (c,u) => `<td class="pc"><b>${pct(c, c+u)}%</b></td>`;
+    const hue = i => "hsl(" + ((i-1) * 47 % 360) + ",65%,88%)";
+    const tr = (o, i, cls) => `<tr class="${cls||(i?"hq":"")}"${i && !cls ? ` style="--hc:${hue(i)}"` : ""}><td>${i}</td><td><b>${esc(o.name)}</b></td>` +
+      n(o.all.c + o.all.u) + n(o.all.c) + lk(o,"ALL",o.all.u,"CREW") + pcl(o.all.c, o.all.u) +
+      n(o.lp.c + o.lp.u) + n(o.lp.c) + lk(o,"LP",o.lp.u,"LP") + pcl(o.lp.c, o.lp.u) +
+      n(o.alp.c + o.alp.u) + n(o.alp.c) + lk(o,"ALP",o.alp.u,"ALP") + pcl(o.alp.c, o.alp.u) + `</tr>`;
     $("hqBody").innerHTML = list.length ? list.map((o,i) => tr(o, i+1)).join("") + (list.length > 1 ? tr(tot, "", "tot") : "")
-      : '<tr><td colspan="11">NO DATA</td></tr>';
+      : '<tr><td colspan="14">NO DATA</td></tr>';
     const rowsOut = list.length > 1 ? list.concat([tot]) : list;
     CUR = {
-      headers: ["S.NO","HQ","TOTAL CREW","CREW COVERED","CREW UNCOVERED","TOTAL LP","LP COVERED","LP UNCOVERED","TOTAL ALP","ALP COVERED","ALP UNCOVERED"],
+      headers: ["S.NO","HQ","TOTAL CREW","CREW COVERED","CREW UNCOVERED","CREW COVERED %","TOTAL LP","LP COVERED","LP UNCOVERED","LP COVERED %","TOTAL ALP","ALP COVERED","ALP UNCOVERED","ALP COVERED %"],
       out: rowsOut.map((o,i) => ({"S.NO": o === tot ? "" : i+1, "HQ":o.name,
-        "TOTAL CREW":o.all.c+o.all.u, "CREW COVERED":o.all.c, "CREW UNCOVERED":o.all.u,
-        "TOTAL LP":o.lp.c+o.lp.u, "LP COVERED":o.lp.c, "LP UNCOVERED":o.lp.u,
-        "TOTAL ALP":o.alp.c+o.alp.u, "ALP COVERED":o.alp.c, "ALP UNCOVERED":o.alp.u})),
+        "TOTAL CREW":o.all.c+o.all.u, "CREW COVERED":o.all.c, "CREW UNCOVERED":o.all.u, "CREW COVERED %":pct(o.all.c,o.all.c+o.all.u)+"%",
+        "TOTAL LP":o.lp.c+o.lp.u, "LP COVERED":o.lp.c, "LP UNCOVERED":o.lp.u, "LP COVERED %":pct(o.lp.c,o.lp.c+o.lp.u)+"%",
+        "TOTAL ALP":o.alp.c+o.alp.u, "ALP COVERED":o.alp.c, "ALP UNCOVERED":o.alp.u, "ALP COVERED %":pct(o.alp.c,o.alp.c+o.alp.u)+"%"})),
       DK: ""
     };
     $("hqTitle").textContent = "HQ WISE DATA (" + $("dType").value + ") - CREW COVERAGE";
+    HQBAR = {list: rowsOut.map(o => ({name:o.name, all:pct(o.all.c,o.all.c+o.all.u), lp:pct(o.lp.c,o.lp.c+o.lp.u), alp:pct(o.alp.c,o.alp.c+o.alp.u),
+      ac:o.all.c, at:o.all.c+o.all.u, lc:o.lp.c, lt:o.lp.c+o.lp.u, pc:o.alp.c, pt:o.alp.c+o.alp.u})),
+      head: "AS ON " + ddmmyyyy(new Date().toISOString().slice(0,10)) + " | " + $("dType").value + " | DATE: " + (from ? ddmmyyyy(from) : "START") + " TO " + (to ? ddmmyyyy(to) : "TODAY")};
+    drawHqChart();
     showHq(true); dm.textContent = "";
   }catch(err){ dm.className="msg err"; dm.textContent="REPORT FAILED: " + err.message; }
 }
@@ -843,11 +909,19 @@ function exportPdf(){
     'h2{margin:0 0 1px;font-size:13px;color:#0b2545}p{margin:0 0 4px;font-size:9px;line-height:1.25}' +
     'table{border-collapse:collapse;width:100%;font-size:9px}th{background:#0b2545;color:#fff;padding:2px 3px;font-size:9px;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
     'td{text-align:center;border:1px solid #bbb;padding:1px 3px;font-size:9px;line-height:1.2;vertical-align:top}tr:nth-child(even) td{background:#f3f5f9;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-    'td.rm{text-align:left;white-space:normal;word-wrap:break-word;overflow-wrap:anywhere;width:30%}thead{display:table-header-group}tr{page-break-inside:avoid}</style></head><body>' +
+    'td{-webkit-print-color-adjust:exact;print-color-adjust:exact}.hqc{text-align:center;margin-bottom:4px}.hqc svg{max-width:100%;max-height:68mm;width:auto;height:auto}.hqc i{-webkit-print-color-adjust:exact;print-color-adjust:exact}.hqc rect{-webkit-print-color-adjust:exact;print-color-adjust:exact}td.rm{text-align:left;white-space:normal;word-wrap:break-word;overflow-wrap:anywhere;width:30%}thead{display:table-header-group}tr{page-break-inside:avoid}</style></head><body>' +
     '<h2>SECR RAIPUR DIVISION - REPORT</h2><p>' + esc(reportTitle()) + '<br>TOTAL ENTRIES: ' + out.length +
-    ' | GENERATED: ' + new Date().toLocaleString("en-IN") + '</p><table><thead><tr>' +
+    ' | GENERATED: ' + new Date().toLocaleString("en-IN") + '</p>' + (HQ_ON && HQBAR ? hqChartPdf() : '') + '<table><thead><tr>' +
     headers.map(h => `<th>${esc(h)}</th>`).join("") + '</tr></thead><tbody>' +
-    out.map(r => "<tr>" + headers.map(h => `<td${/REMARK/i.test(h) ? ' class="rm"' : ''}>${esc(cellVal(r,h,DK))}</td>`).join("") + "</tr>").join("") +
+    out.map((r,ri) => "<tr>" + headers.map(h => {
+      let st = "";
+      if (HQ_ON){
+        const isTot = r["HQ"] === "GRAND TOTAL";
+        st = / %$/.test(h) ? "background:#ffeb3b" : isTot ? "background:#fff4cc" : "background:hsl(" + (ri * 47 % 360) + ",65%,88%)";
+        st = ` style="${st};font-weight:${isTot ? 700 : 400}"`;
+      }
+      return `<td${/REMARK/i.test(h) ? ' class="rm"' : ''}${st}>${esc(cellVal(r,h,DK))}</td>`;
+    }).join("") + "</tr>").join("") +
     '</tbody></table></body></html>');
   w.document.close(); w.focus();
   setTimeout(() => w.print(), 400);
