@@ -189,6 +189,7 @@
       <div><button id="dDate" type="button" class="cn" style="background:#ef6c00">DATE WISE REPORT</button></div>
       <div><button id="dCliW" type="button" class="cn" style="background:#283593">CLI WISE REPORT</button></div>
       <div><button id="dHq" type="button" class="cn" style="background:#00838f">HQ WISE DATA</button></div>
+      <div><button id="dUniq" type="button" class="xl" style="background:#4e342e">UNIQUE CREW EXCEL</button></div>
     </div>
     <div id="pie" class="pie"></div>
     <div class="stats" id="stats"></div>
@@ -273,6 +274,8 @@ const FIELDS = {
 };
 
 const $ = id => document.getElementById(id);
+/* LPP / LPM are treated as LPG (counted under LP) */
+const normDes = d => String(d == null ? "" : d).replace(/\b(LPP|LPM)\b/gi, "LPG");
 
 /* GET helper: normal fetch, falls back to JSONP if the browser blocks fetch */
 function jsonp(url){
@@ -356,7 +359,7 @@ async function loadCrew(){
   st.className = ""; st.textContent = "LOADING CREW LIST...";
   try{
     const j = await api(API_URL + "?action=lookup&id=__ALL__");
-    CREW = {}; CREW_LIST = j.crew || [];
+    CREW = {}; CREW_LIST = (j.crew || []).map(c => { c.designation = normDes(c.designation); return c; });
     CLI_LIST = j.clis || [];
     fillCliFilter(rows);
     document.querySelectorAll('select[name="DONE BY CLI"]').forEach(el => {
@@ -1058,7 +1061,7 @@ function renderDash(headers){
     `<div class="stat"><b>${out.length}</b>TOTAL ENTRIES</div>` +
     `<div class="stat"><b>${out.filter(r=>String(r[DK]).slice(0,10)===today).length}</b>TODAY</div>` +
     `<div class="stat"><b>${out.filter(r=>String(r[DK]).slice(0,7)===month).length}</b>THIS MONTH</div>` +
-    `<div class="stat"><b>${uniq("CMS ID")}</b>UNIQUE CREW</div>` +
+    `<div class="stat"><b>${new Set(out.map(r => String(r["CMS ID"]||"").trim().toUpperCase()).filter(Boolean)).size}</b>UNIQUE CREW</div>` +
     `<div class="stat"><b>${uniq(HK)}</b>HQ / LOBBY</div>`;
   CUR = {headers, out, DK};
   drawPie(out);
@@ -1067,7 +1070,48 @@ function renderDash(headers){
     "<tr>" + headers.map(h => `<td${/REMARK/i.test(h) ? ' class="rm"' : ''}>${esc(String(r[h] ?? "").slice(0,10) && h===DK ? String(r[h]).slice(0,10) : (r[h] ?? ""))}</td>`).join("") + "</tr>").join("");
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function uniqueCrewExcel(){
+  const dm = $("dmsg");
+  if (!rows.length){ dm.className="msg err"; dm.textContent="LOAD DATA FIRST"; return; }
+  const hs = Object.keys(rows[0]);
+  const DK = hs.find(h => h.indexOf("DATE") > -1) || "TIMESTAMP";
+  const from = $("dFrom").value, to = $("dTo").value, cli = $("dCli").value.trim().toUpperCase(), grp = $("dGroup").value.trim().toUpperCase();
+  const g = {};
+  rows.forEach(r => {
+    const d = String(r[DK] || "").slice(0,10);
+    if (from && d < from) return;
+    if (to && d > to) return;
+    if (cli && String(r["DONE BY CLI"] || "").trim().toUpperCase() !== cli) return;
+    if (grp && String(r["CLI NAME"] || "").trim().toUpperCase() !== grp) return;
+    const raw = String(r["CMS ID"] || "").trim(); if (!raw) return;
+    const k = raw.toUpperCase();
+    const o = g[k] || (g[k] = {id:raw, n:0, first:"", last:"", r:r});
+    o.n++;
+    if (d){ if (!o.first || d < o.first) o.first = d; if (!o.last || d > o.last) o.last = d; }
+  });
+  const list = Object.keys(g).map(k => {
+    const o = g[k], c = CREW[k], r = o.r;
+    return {id:o.id, name:(c ? c.name : r["CREW NAME"]) || "", des:normDes(c ? c.designation : r["DESIGNATION"]),
+      hq:(c ? c.hq : (r["HQ"] || r["HQ / LOBBY"])) || "", cli:(c ? c.cli : r["CLI NAME"]) || "",
+      n:o.n, first:o.first, last:o.last, inl:!!c};
+  }).sort((a,b) => (a.inl - b.inl) || a.id.localeCompare(b.id, undefined, {numeric:true}));
+  const cat = d => { d = String(d).toUpperCase(); return d.includes("ALP") ? "ALP" : d.includes("LP") ? "LP" : "OTHER"; };
+  const nIn = list.filter(x => x.inl).length, nOut = list.length - nIn;
+  const H = ["S.NO","CMS ID","CREW NAME","DESIGNATION","CATEGORY","HQ","GROUP CLI","ENTRIES","FIRST DATE","LAST DATE","STATUS"];
+  const body = list.map((x,i) => [i+1, x.id, x.name, x.des, cat(x.des), x.hq, x.cli, x.n, x.first, x.last, x.inl ? "IN CREW LIST" : "NOT IN CREW LIST"]);
+  const html = '<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body><table border="1">' +
+    '<tr><td colspan="' + H.length + '"><b>' + esc("UNIQUE CREW LIST (" + $("dType").value + ") | DATE: " + (from || "START") + " TO " + (to || "TODAY") + " | UNIQUE: " + list.length + " | IN CREW LIST: " + nIn + " | NOT IN CREW LIST: " + nOut) + '</b></td></tr>' +
+    '<tr>' + H.map(h => `<th style="background:#0b2545;color:#fff;text-align:center">${esc(h)}</th>`).join("") + '</tr>' +
+    body.map(r => '<tr' + (r[10] !== "IN CREW LIST" ? ' style="background:#ffcdd2"' : '') + '>' + r.map(v => `<td style="text-align:center;mso-number-format:'\\@'">${esc(v)}</td>`).join("") + '</tr>').join("") +
+    '</table></body></html>';
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\ufeff" + html], {type:"application/vnd.ms-excel"}));
+  a.download = "UNIQUE_CREW_" + $("dType").value.replace(/\s+/g,"_") + "_" + new Date().toISOString().slice(0,10) + ".xls";
+  document.body.appendChild(a); a.click(); a.remove();
+  dm.className="msg ok"; dm.textContent="UNIQUE CREW: " + list.length + " | IN LIST: " + nIn + " | NOT IN LIST: " + nOut;
+}
 $("dLoad").onclick = loadDash;
+$("dUniq").onclick = uniqueCrewExcel;
 $("dPdf").onclick = exportPdf;
 $("dXls").onclick = exportExcel;
 $("dGroup").onchange = refresh;
