@@ -189,6 +189,7 @@
       <div><button id="dDate" type="button" class="cn" style="background:#ef6c00">DATE WISE REPORT</button></div>
       <div><button id="dCliW" type="button" class="cn" style="background:#283593">CLI WISE REPORT</button></div>
       <div><button id="dHq" type="button" class="cn" style="background:#00838f">HQ WISE DATA</button></div>
+      <div><button id="dCrewW" type="button" class="cn" style="background:#6a1b9a">CREW WISE REPORT</button></div>
       <div><button id="dUniq" type="button" class="xl" style="background:#4e342e">UNIQUE CREW EXCEL</button></div>
     </div>
     <div id="pie" class="pie"></div>
@@ -210,6 +211,12 @@
         <button type="button" class="pd" id="cliwPdf" style="margin-left:8px;padding:6px 14px;background:#b00020">GENERATE PDF</button></div>
       <div class="tblwrap" style="max-width:640px"><table><thead><tr><th>S.NO</th><th>CLI NAME</th><th>COUNSELLING DONE</th></tr></thead><tbody id="cliwBody"></tbody></table></div>
       <div id="cliwMsgs" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:16px"></div>
+    </div>
+    <div id="creww" class="hide">
+      <div style="margin-bottom:8px;font-weight:700;color:var(--navy)"><span id="crewwTitle">CREW WISE REPORT - REPEAT COUNT FOR EACH CMS ID</span>
+        <button type="button" class="alt" id="crewwBack" style="margin-left:12px;padding:6px 14px">BACK TO ENTRIES</button>
+        <button type="button" class="pd" id="crewwPdf" style="margin-left:8px;padding:6px 14px;background:#b00020">GENERATE PDF</button></div>
+      <div class="tblwrap"><table><thead><tr><th>S.NO</th><th>CMS ID</th><th>CREW NAME</th><th>DESIGNATION</th><th>HQ</th><th>GROUP CLI</th><th>REPEAT COUNT</th><th>FIRST DATE</th><th>LAST DATE</th></tr></thead><tbody id="crewwBody"></tbody></table></div>
     </div>
     <div id="done" class="hide">
       <div style="margin-bottom:8px;font-weight:700;color:var(--navy)">DONE BY REPORT - NO. OF TIMES EACH CLI NAME IS REPEATED (DONE BY CLI)
@@ -470,12 +477,13 @@ form.onsubmit = async e => {
 };
 
 /* ---- dashboard ---- */
-let CLIW_ON = false, BAR = null;
+let CLIW_ON = false, BAR = null, CREWW_ON = false;
 let CONS_ON = false, DONE_ON = false, DATE_ON = false, DET_ON = false, DET_TITLE = "", UNC_MAP = {}, HQ_ON = false, DET_FROM = "cons";
 let rows = [], CUR = {headers:[], out:[], DK:""};
 const cellVal = (r,h,DK) => h === DK ? String(r[h] ?? "").slice(0,10) : String(r[h] ?? "");
 function reportTitle(){
   if (DET_ON) return DET_TITLE;
+  if (CREWW_ON) return "CREW WISE REPORT (" + $("dType").value + ") - REPEAT COUNT PER CMS ID" + (($("dFrom").value || $("dTo").value) ? " | DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY") : "");
   if (HQ_ON) return "HQ WISE DATA (" + $("dType").value + ") - CREW COVERAGE" + (($("dFrom").value || $("dTo").value) ? " | DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY") : "");
   const f = [CONS_ON ? "CONSOLIDATE REPORT (" + $("dType").value + ")" : DONE_ON ? "DONE BY REPORT (COUNSELLING + BFT BPT)" : DATE_ON ? "SUMMARY - DATE WISE REPORT (COUNSELLING)" : CLIW_ON ? "CLI WISE REPORT - COUNSELLING DONE BY CLI (DESCENDING)" : $("dType").value];
   if (CONS_ON) { if ($("consCli").value) f.push("CLI: " + $("consCli").value); }
@@ -491,17 +499,19 @@ function applyView(){
   $("det").classList.toggle("hide", !DET_ON);
   $("cliw").classList.toggle("hide", !CLIW_ON);
   $("hqw").classList.toggle("hide", !HQ_ON);
-  const any = CONS_ON || DONE_ON || DATE_ON || DET_ON || CLIW_ON || HQ_ON;
+  $("creww").classList.toggle("hide", !CREWW_ON);
+  const any = CONS_ON || DONE_ON || DATE_ON || DET_ON || CLIW_ON || HQ_ON || CREWW_ON;
   $("stats").classList.toggle("hide", any);
   $("pie").classList.toggle("hide", any);
   $("tblwrap").classList.toggle("hide", any);
 }
-function showCons(on){ CONS_ON = on; if (on) DONE_ON = DATE_ON = DET_ON = CLIW_ON = HQ_ON = false; applyView(); }
-function showDone(on){ DONE_ON = on; if (on) CONS_ON = DATE_ON = DET_ON = CLIW_ON = HQ_ON = false; applyView(); }
-function showDate(on){ DATE_ON = on; if (on) CONS_ON = DONE_ON = DET_ON = CLIW_ON = HQ_ON = false; applyView(); }
-function showDet(on){ DET_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = CLIW_ON = HQ_ON = false; applyView(); }
-function showCliw(on){ CLIW_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = DET_ON = HQ_ON = false; applyView(); }
-function showHq(on){ HQ_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = DET_ON = CLIW_ON = false; applyView(); }
+function showCons(on){ CONS_ON = on; if (on) DONE_ON = DATE_ON = DET_ON = CLIW_ON = HQ_ON = CREWW_ON = false; applyView(); }
+function showDone(on){ DONE_ON = on; if (on) CONS_ON = DATE_ON = DET_ON = CLIW_ON = HQ_ON = CREWW_ON = false; applyView(); }
+function showDate(on){ DATE_ON = on; if (on) CONS_ON = DONE_ON = DET_ON = CLIW_ON = HQ_ON = CREWW_ON = false; applyView(); }
+function showDet(on){ DET_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = CLIW_ON = HQ_ON = CREWW_ON = false; applyView(); }
+function showCliw(on){ CLIW_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = DET_ON = HQ_ON = CREWW_ON = false; applyView(); }
+function showCreww(on){ CREWW_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = DET_ON = CLIW_ON = HQ_ON = false; applyView(); }
+function showHq(on){ HQ_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = DET_ON = CLIW_ON = CREWW_ON = false; applyView(); }
 function cliList(j, from, to, sel){
   const rs = j.rows || [];
   const hs = j.headers || Object.keys(rs[0] || {});
@@ -887,7 +897,7 @@ async function consolidate(){
     showCons(true); dm.textContent = "";
   }catch(err){ dm.className="msg err"; dm.textContent="REPORT FAILED: " + err.message; }
 }
-const refresh = () => HQ_ON ? hqWise() : (CONS_ON || DET_ON) ? (DET_FROM === "hq" ? hqWise() : consolidate()) : CLIW_ON ? cliWise() : DONE_ON ? doneBy() : DATE_ON ? dateWise() : (rows.length && renderDash(Object.keys(rows[0])));
+const refresh = () => CREWW_ON ? crewWise() : HQ_ON ? hqWise() : (CONS_ON || DET_ON) ? (DET_FROM === "hq" ? hqWise() : consolidate()) : CLIW_ON ? cliWise() : DONE_ON ? doneBy() : DATE_ON ? dateWise() : (rows.length && renderDash(Object.keys(rows[0])));
 function exportExcel(){
   const {headers, out, DK} = CUR;
   if (!out.length){ $("dmsg").className="msg err"; $("dmsg").textContent="NO DATA TO EXPORT"; return; }
@@ -930,7 +940,7 @@ function exportPdf(){
   setTimeout(() => w.print(), 400);
 }
 async function loadDash(){
-  CONS_ON = false; DONE_ON = false; DATE_ON = false; DET_ON = false; CLIW_ON = false; HQ_ON = false; applyView();
+  CONS_ON = false; DONE_ON = false; DATE_ON = false; DET_ON = false; CLIW_ON = false; HQ_ON = false; CREWW_ON = false; applyView();
   if (API_URL.startsWith("PASTE")) { $("dmsg").className="msg err"; $("dmsg").textContent="SET API_URL FIRST"; return; }
   $("dmsg").className="msg"; $("dmsg").textContent="LOADING...";
   try{
@@ -1070,6 +1080,46 @@ function renderDash(headers){
     "<tr>" + headers.map(h => `<td${/REMARK/i.test(h) ? ' class="rm"' : ''}>${esc(String(r[h] ?? "").slice(0,10) && h===DK ? String(r[h]).slice(0,10) : (r[h] ?? ""))}</td>`).join("") + "</tr>").join("");
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function crewWise(){
+  const dm = $("dmsg");
+  if (!rows.length){ dm.className="msg err"; dm.textContent="LOAD DATA FIRST"; return; }
+  const hs = Object.keys(rows[0]);
+  const DK = hs.find(h => h.indexOf("DATE") > -1) || "TIMESTAMP";
+  const from = $("dFrom").value, to = $("dTo").value, cli = $("dCli").value.trim().toUpperCase(), grp = $("dGroup").value.trim().toUpperCase();
+  const g = {};
+  rows.forEach(r => {
+    const d = String(r[DK] || "").slice(0,10);
+    if (from && d < from) return;
+    if (to && d > to) return;
+    if (cli && String(r["DONE BY CLI"] || "").trim().toUpperCase() !== cli) return;
+    if (grp && String(r["CLI NAME"] || "").trim().toUpperCase() !== grp) return;
+    const raw = String(r["CMS ID"] || "").trim(); if (!raw) return;
+    const k = raw.toUpperCase();
+    const o = g[k] || (g[k] = {id:raw, n:0, first:"", last:"", r:r});
+    o.n++;
+    if (d){ if (!o.first || d < o.first) o.first = d; if (!o.last || d > o.last) o.last = d; }
+  });
+  const list = Object.keys(g).map(k => {
+    const o = g[k], c = CREW[k], r = o.r;
+    return {id:o.id, name:(c ? c.name : r["CREW NAME"]) || "", des:normDes(c ? c.designation : r["DESIGNATION"]),
+      hq:(c ? c.hq : (r["HQ"] || r["HQ / LOBBY"])) || "", cli:(c ? c.cli : r["CLI NAME"]) || "",
+      n:o.n, first:o.first, last:o.last};
+  }).sort((a,b) => (b.n - a.n) || a.id.localeCompare(b.id, undefined, {numeric:true}));
+  const total = list.reduce((a,o) => a + o.n, 0);
+  const rep = list.filter(x => x.n > 1).length;
+  $("crewwTitle").textContent = "CREW WISE REPORT - REPEAT COUNT FOR EACH CMS ID (" + $("dType").value + ") | UNIQUE CREW: " + list.length + " | REPEATED (2+): " + rep + " | TOTAL ENTRIES: " + total;
+  $("crewwBody").innerHTML = list.length
+    ? list.map((x,i) => `<tr><td>${i+1}</td><td><b>${esc(x.id)}</b></td><td>${esc(x.name)}</td><td>${esc(x.des)}</td><td>${esc(x.hq)}</td><td>${esc(x.cli)}</td><td><b>${x.n}</b></td><td>${esc(x.first)}</td><td>${esc(x.last)}</td></tr>`).join("") +
+      `<tr class="tot"><td></td><td><b>GRAND TOTAL</b></td><td></td><td></td><td></td><td></td><td><b>${total}</b></td><td></td><td></td></tr>`
+    : '<tr><td colspan="9">NO DATA</td></tr>';
+  CUR = {
+    headers: ["S.NO","CMS ID","CREW NAME","DESIGNATION","HQ","GROUP CLI","REPEAT COUNT","FIRST DATE","LAST DATE"],
+    out: list.map((x,i) => ({"S.NO":i+1, "CMS ID":x.id, "CREW NAME":x.name, "DESIGNATION":x.des, "HQ":x.hq, "GROUP CLI":x.cli, "REPEAT COUNT":x.n, "FIRST DATE":x.first, "LAST DATE":x.last}))
+      .concat(list.length ? [{"S.NO":"", "CMS ID":"GRAND TOTAL", "CREW NAME":"", "DESIGNATION":"", "HQ":"", "GROUP CLI":"", "REPEAT COUNT":total, "FIRST DATE":"", "LAST DATE":""}] : []),
+    DK: ""
+  };
+  showCreww(true); dm.textContent = "";
+}
 function uniqueCrewExcel(){
   const dm = $("dmsg");
   if (!rows.length){ dm.className="msg err"; dm.textContent="LOAD DATA FIRST"; return; }
@@ -1112,6 +1162,9 @@ function uniqueCrewExcel(){
 }
 $("dLoad").onclick = loadDash;
 $("dUniq").onclick = uniqueCrewExcel;
+$("dCrewW").onclick = crewWise;
+$("crewwPdf").onclick = exportPdf;
+$("crewwBack").onclick = () => { showCreww(false); if (rows.length) renderDash(Object.keys(rows[0])); };
 $("dPdf").onclick = exportPdf;
 $("dXls").onclick = exportExcel;
 $("dGroup").onchange = refresh;
