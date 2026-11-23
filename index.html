@@ -206,11 +206,19 @@
       <div class="tblwrap"><table><thead><tr><th>S.NO</th><th>CREW NAME</th><th>HQ</th><th>DESIGNATION</th><th>CMS ID</th><th>CLI NAME</th></tr></thead><tbody id="detBody"></tbody></table></div>
     </div>
     <div id="cliw" class="hide">
+    <div id="cliwMain">
       <div style="margin-bottom:8px;font-weight:700;color:var(--navy)"><span id="cliwTitle">CLI WISE REPORT - NO. OF COUNSELLING DONE BY EACH CLI (DESCENDING)</span>
         <button type="button" class="alt" id="cliwBack" style="margin-left:12px;padding:6px 14px">BACK TO ENTRIES</button>
         <button type="button" class="pd" id="cliwPdf" style="margin-left:8px;padding:6px 14px;background:#b00020">GENERATE PDF</button></div>
-      <div class="tblwrap" style="max-width:640px"><table><thead><tr><th>S.NO</th><th>CLI NAME</th><th>COUNSELLING DONE</th></tr></thead><tbody id="cliwBody"></tbody></table></div>
+      <div class="tblwrap" style="max-width:640px"><table><thead><tr><th>S.NO</th><th>CLI NAME</th><th id="cliwColH">COUNSELLING DONE</th></tr></thead><tbody id="cliwBody"></tbody></table></div>
       <div id="cliwMsgs" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:16px"></div>
+    </div>
+    <div id="cliwDet" class="hide">
+      <div style="margin-bottom:8px;font-weight:700;color:var(--navy)"><span id="cliwDetTitle"></span>
+        <button type="button" class="alt" id="cliwDetBack" style="margin-left:12px;padding:6px 14px">BACK TO CLI WISE</button>
+        <button type="button" class="pd" id="cliwDetPdf" style="margin-left:8px;padding:6px 14px;background:#b00020">GENERATE PDF</button></div>
+      <div class="tblwrap" style="max-width:520px"><table><thead><tr><th>S.NO</th><th>DATE</th><th id="cliwDetCol">COUNT</th></tr></thead><tbody id="cliwDetBody"></tbody></table></div>
+    </div>
     </div>
     <div id="creww" class="hide">
       <div style="margin-bottom:8px;font-weight:700;color:var(--navy)"><span id="crewwTitle">CREW WISE REPORT - REPEAT COUNT FOR EACH CMS ID</span>
@@ -483,9 +491,10 @@ let rows = [], CUR = {headers:[], out:[], DK:""};
 const cellVal = (r,h,DK) => h === DK ? String(r[h] ?? "").slice(0,10) : String(r[h] ?? "");
 function reportTitle(){
   if (DET_ON) return DET_TITLE;
+  if (CLIW_ON && CLIW_DET) return "CLI WISE REPORT - DATE WISE BREAKUP - " + CLIW_DET + " (" + CLIW_COL + ")" + (($("dFrom").value || $("dTo").value) ? " | DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY") : "");
   if (CREWW_ON) return "CREW WISE REPORT (" + $("dType").value + ") - REPEAT COUNT PER CMS ID" + (($("dFrom").value || $("dTo").value) ? " | DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY") : "");
   if (HQ_ON) return "HQ WISE DATA (" + $("dType").value + ") - CREW COVERAGE" + (($("dFrom").value || $("dTo").value) ? " | DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY") : "");
-  const f = [CONS_ON ? "CONSOLIDATE REPORT (" + $("dType").value + ")" : DONE_ON ? "DONE BY REPORT (COUNSELLING + BFT BPT)" : DATE_ON ? "SUMMARY - DATE WISE REPORT (" + $("dType").value + ")" : CLIW_ON ? "CLI WISE REPORT - COUNSELLING DONE BY CLI (DESCENDING)" : $("dType").value];
+  const f = [CONS_ON ? "CONSOLIDATE REPORT (" + $("dType").value + ")" : DONE_ON ? "DONE BY REPORT (COUNSELLING + BFT BPT)" : DATE_ON ? "SUMMARY - DATE WISE REPORT (" + $("dType").value + ")" : CLIW_ON ? "CLI WISE REPORT - " + ($("dType").value === "BFT BPT" ? "BFT BPT" : "COUNSELLING") + " DONE BY CLI (DESCENDING)" : $("dType").value];
   if (CONS_ON) { if ($("consCli").value) f.push("CLI: " + $("consCli").value); }
   else if (!DONE_ON && !CLIW_ON && $("dGroup").value) f.push("GROUP CLI: " + $("dGroup").value);
   if (!CONS_ON && !DATE_ON && $("dCli").value) f.push("DONE BY CLI: " + $("dCli").value);
@@ -517,13 +526,19 @@ function cliList(j, from, to, sel){
   const hs = j.headers || Object.keys(rs[0] || {});
   const DK = hs.find(h => h.indexOf("DATE") > -1) || "TIMESTAMP";
   const g = {};
-  CLI_LIST.forEach(n => { const nm = String(n).trim(); if (nm && (!sel || nm.toUpperCase() === sel)) g[nm.toUpperCase()] = {name:nm, n:0}; });
+  const isTs = String(DK).toUpperCase().indexOf("DATE") === -1;
+  const p2 = n => (n < 10 ? "0" : "") + n;
+  const dk = v => { v = String(v == null ? "" : v).trim(); if (!v) return "";
+    if (isTs && /^\d{4}-\d{2}-\d{2}T.*(Z|[+-]\d{2}:?\d{2})$/.test(v)){ const t = new Date(v); if (!isNaN(t)) return t.getFullYear() + "-" + p2(t.getMonth()+1) + "-" + p2(t.getDate()); }
+    return v.slice(0,10); };
+  CLI_LIST.forEach(n => { const nm = String(n).trim(); if (nm && (!sel || nm.toUpperCase() === sel)) g[nm.toUpperCase()] = {name:nm, n:0, dates:{}}; });
   rs.forEach(r => {
-    const d = String(r[DK] || "").slice(0,10);
+    const d = dk(r[DK]);
     if (d && ((from && d < from) || (to && d > to))) return;
     const nm = String(r["DONE BY CLI"] || "").trim(); if (!nm) return;
     const k = nm.toUpperCase(); if (sel && k !== sel) return;
-    (g[k] || (g[k] = {name:nm, n:0})).n++;
+    const o = g[k] || (g[k] = {name:nm, n:0, dates:{}});
+    o.n++; const dd = /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : "NO DATE"; o.dates[dd] = (o.dates[dd] || 0) + 1;
   });
   return Object.values(g).sort((a,b) => b.n - a.n || a.name.localeCompare(b.name));
 }
@@ -580,21 +595,48 @@ async function cliWise(){
     const res = await Promise.all(names.map(n => api(API_URL + "?sheet=" + encodeURIComponent(n))));
     const from = $("dFrom").value, to = $("dTo").value, sel = $("dCli").value.trim().toUpperCase();
     const lists = res.map(j => cliList(j, from, to, sel));
-    const list = lists[0];
+    const sel0 = $("dType").value === "BFT BPT" ? 1 : 0;
+    const list = lists[sel0];
+    const colN = sel0 ? "BFT BPT DONE" : "COUNSELLING DONE";
+    $("cliwColH").textContent = colN;
+    $("cliwTitle").textContent = "CLI WISE REPORT - NO. OF " + colN + " BY EACH CLI (DESCENDING)";
     const total = list.reduce((a,o) => a + o.n, 0);
     $("cliwBody").innerHTML = list.length
-      ? list.map((o,i) => `<tr><td>${i+1}</td><td><b>${esc(o.name)}</b></td><td><b>${o.n}</b></td></tr>`).join("") +
-        `<tr class="tot"><td></td><td><b>GRAND TOTAL</b></td><td><b>${total}</b></td></tr>`
+      ? list.map((o,i) => `<tr><td>${i+1}</td><td><b>${esc(o.name)}</b></td><td><span class="lnk" data-i="${i}" title="DATE WISE BREAKUP">${o.n}</span></td></tr>`).join("") +
+        `<tr class="tot"><td></td><td><b>GRAND TOTAL</b></td><td><span class="lnk" data-i="all" title="DATE WISE BREAKUP">${total}</span></td></tr>`
       : '<tr><td colspan="3">NO DATA</td></tr>';
     msgBlocks(names.map((n,i) => ({sheet:n, text:cliMsg(n, lists[i], from, to)})));
     CUR = {
-      headers: ["S.NO","CLI NAME","COUNSELLING DONE"],
-      out: list.map((o,i) => ({"S.NO":i+1, "CLI NAME":o.name, "COUNSELLING DONE":o.n}))
-        .concat(list.length ? [{"S.NO":"", "CLI NAME":"GRAND TOTAL", "COUNSELLING DONE":total}] : []),
+      headers: ["S.NO","CLI NAME",colN],
+      out: list.map((o,i) => ({"S.NO":i+1, "CLI NAME":o.name, [colN]:o.n}))
+        .concat(list.length ? [{"S.NO":"", "CLI NAME":"GRAND TOTAL", [colN]:total}] : []),
       DK: ""
     };
+    CLIW_LIST = list; CLIW_COL = colN; CLIW_MAIN = CUR; CLIW_DET = "";
+    $("cliwDet").classList.add("hide"); $("cliwMain").classList.remove("hide");
     showCliw(true); dm.textContent = "";
   }catch(err){ dm.className="msg err"; dm.textContent="REPORT FAILED: " + err.message; }
+}
+let CLIW_LIST = [], CLIW_COL = "", CLIW_MAIN = null, CLIW_DET = "";
+function cliwDetail(i){
+  const all = i === "all", o = all ? null : CLIW_LIST[+i];
+  const dates = {};
+  (all ? CLIW_LIST : [o]).forEach(x => Object.keys(x.dates || {}).forEach(d => dates[d] = (dates[d] || 0) + x.dates[d]));
+  const ds = Object.keys(dates).sort();
+  const tot = ds.reduce((a,d) => a + dates[d], 0);
+  const nm = all ? "ALL CLI" : o.name;
+  CLIW_DET = nm;
+  const t = "DATE WISE BREAKUP - " + nm + " (" + CLIW_COL + ")";
+  $("cliwDetTitle").textContent = t; $("cliwDetCol").textContent = CLIW_COL;
+  $("cliwDetBody").innerHTML = (ds.length ? ds.map((d,k) => `<tr><td>${k+1}</td><td>${d === "NO DATE" ? d : ddmmyyyy(d)}</td><td><b>${dates[d]}</b></td></tr>`).join("") +
+    `<tr class="tot"><td></td><td><b>TOTAL</b></td><td><b>${tot}</b></td></tr>` : '<tr><td colspan="3">NO DATA</td></tr>');
+  CUR = { headers: ["S.NO","DATE",CLIW_COL],
+    out: ds.map((d,k) => ({"S.NO":k+1, "DATE":d === "NO DATE" ? d : ddmmyyyy(d), [CLIW_COL]:dates[d]})).concat(ds.length ? [{"S.NO":"","DATE":"TOTAL",[CLIW_COL]:tot}] : []), DK: "" };
+  $("cliwMain").classList.add("hide"); $("cliwDet").classList.remove("hide");
+}
+function cliwDetClose(){
+  CLIW_DET = ""; if (CLIW_MAIN) CUR = CLIW_MAIN;
+  $("cliwDet").classList.add("hide"); $("cliwMain").classList.remove("hide");
 }
 function uncDetail(key, label, from){
   DET_FROM = from || "cons";
@@ -1199,13 +1241,16 @@ $("dHq").onclick = hqWise;
 $("hqBack").onclick = () => { showHq(false); if (rows.length) renderDash(Object.keys(rows[0])); };
 $("hqBody").onclick = e => { const t = e.target.closest(".lnk"); if (t) uncDetail(t.dataset.k, t.dataset.l, "hq"); };
 $("cliwPdf").onclick = exportPdf;
-$("cliwBack").onclick = () => { showCliw(false); if (rows.length) renderDash(Object.keys(rows[0])); };
+$("cliwBody").onclick = e => { const t = e.target.closest(".lnk"); if (t) cliwDetail(t.dataset.i); };
+$("cliwDetBack").onclick = cliwDetClose;
+$("cliwDetPdf").onclick = exportPdf;
+$("cliwBack").onclick = () => { cliwDetClose(); showCliw(false); if (rows.length) renderDash(Object.keys(rows[0])); };
 $("dateBack").onclick = () => { showDate(false); if (rows.length) renderDash(Object.keys(rows[0])); };
 $("doneBack").onclick = () => { showDone(false); if (rows.length) renderDash(Object.keys(rows[0])); };
 $("consCli").onchange = consolidate;
 $("consBack").onclick = () => { showCons(false); if (rows.length) renderDash(Object.keys(rows[0])); };
 $("dType").onchange = () => { $("dCli").value = ""; $("dGroup").value = ""; $("consCli").value = "";
-  const wasCons = CONS_ON, wasHq = HQ_ON, wasDate = DATE_ON; loadDash().then(() => { if (wasCons) consolidate(); if (wasHq) hqWise(); if (wasDate) dateWise(); }); };
+  const wasCons = CONS_ON, wasHq = HQ_ON, wasDate = DATE_ON, wasCliw = CLIW_ON; loadDash().then(() => { if (wasCons) consolidate(); if (wasHq) hqWise(); if (wasDate) dateWise(); if (wasCliw) cliWise(); }); };
 loadCrew();
 ["dFrom","dTo"].forEach(id => $(id).oninput = () => { refresh(); loadTicker(); });
 </script>
