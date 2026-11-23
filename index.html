@@ -196,9 +196,9 @@
     <div class="stats" id="stats"></div>
     <div class="tblwrap" id="tblwrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
     <div id="dateRep" class="hide">
-      <div style="margin-bottom:8px;font-weight:700;color:var(--navy)">SUMMARY - DATE WISE COUNSELLING (LP / ALP)
+      <div style="margin-bottom:8px;font-weight:700;color:var(--navy)"><span id="dateTitle">SUMMARY - DATE WISE COUNSELLING (LP / ALP)</span>
         <button type="button" class="alt" id="dateBack" style="margin-left:12px;padding:6px 14px">BACK TO ENTRIES</button></div>
-      <div class="tblwrap" style="max-width:640px"><table><thead><tr><th>DATE</th><th>LP COUNSELLED</th><th>ALP COUNSELLED</th></tr></thead><tbody id="dateBody"></tbody></table></div>
+      <div class="tblwrap" style="max-width:640px"><table><thead><tr><th>DATE</th><th id="dateLpH">LP COUNSELLED</th><th id="dateAlpH">ALP COUNSELLED</th></tr></thead><tbody id="dateBody"></tbody></table></div>
     </div>
     <div id="det" class="hide">
       <div style="margin-bottom:8px;font-weight:700;color:var(--navy)"><span id="detTitle">UNCOVERED CREW DETAILS</span>
@@ -485,7 +485,7 @@ function reportTitle(){
   if (DET_ON) return DET_TITLE;
   if (CREWW_ON) return "CREW WISE REPORT (" + $("dType").value + ") - REPEAT COUNT PER CMS ID" + (($("dFrom").value || $("dTo").value) ? " | DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY") : "");
   if (HQ_ON) return "HQ WISE DATA (" + $("dType").value + ") - CREW COVERAGE" + (($("dFrom").value || $("dTo").value) ? " | DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY") : "");
-  const f = [CONS_ON ? "CONSOLIDATE REPORT (" + $("dType").value + ")" : DONE_ON ? "DONE BY REPORT (COUNSELLING + BFT BPT)" : DATE_ON ? "SUMMARY - DATE WISE REPORT (COUNSELLING)" : CLIW_ON ? "CLI WISE REPORT - COUNSELLING DONE BY CLI (DESCENDING)" : $("dType").value];
+  const f = [CONS_ON ? "CONSOLIDATE REPORT (" + $("dType").value + ")" : DONE_ON ? "DONE BY REPORT (COUNSELLING + BFT BPT)" : DATE_ON ? "SUMMARY - DATE WISE REPORT (" + $("dType").value + ")" : CLIW_ON ? "CLI WISE REPORT - COUNSELLING DONE BY CLI (DESCENDING)" : $("dType").value];
   if (CONS_ON) { if ($("consCli").value) f.push("CLI: " + $("consCli").value); }
   else if (!DONE_ON && !CLIW_ON && $("dGroup").value) f.push("GROUP CLI: " + $("dGroup").value);
   if (!CONS_ON && !DATE_ON && $("dCli").value) f.push("DONE BY CLI: " + $("dCli").value);
@@ -618,20 +618,35 @@ async function dateWise(){
   const dm = $("dmsg");
   dm.className="msg"; dm.textContent="BUILDING DATE WISE REPORT...";
   try{
-    const j = await api(API_URL + "?sheet=" + encodeURIComponent("COUNSELLING"));
+    const sheetName = $("dType").value || "COUNSELLING";
+    const j = await api(API_URL + "?sheet=" + encodeURIComponent(sheetName));
     const rs = j.rows || [];
     const hs = j.headers || Object.keys(rs[0] || {});
-    const DK = hs.find(h => h.indexOf("DATE") > -1) || "TIMESTAMP";
+    /* BFT BPT sheet has no DATE column -> use TIMESTAMP (or any *TIME* column) */
+    const DK = hs.find(h => String(h).toUpperCase().indexOf("DATE") > -1) || hs.find(h => /TIME/i.test(String(h))) || "TIMESTAMP";
+    const isTs = String(DK).toUpperCase().indexOf("DATE") === -1;
+    const pad2 = n => (n < 10 ? "0" : "") + n;
+    const dKey = v => {
+      v = String(v == null ? "" : v).trim(); if (!v) return "";
+      if (/^\d{4}-\d{2}-\d{2}/.test(v)){
+        if (isTs && /T.*(Z|[+-]\d{2}:?\d{2})$/.test(v)){ const t = new Date(v); if (!isNaN(t)) return t.getFullYear() + "-" + pad2(t.getMonth()+1) + "-" + pad2(t.getDate()); }
+        return v.slice(0,10);
+      }
+      let m = v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);   /* DD/MM/YYYY [time] */
+      if (m) return m[3] + "-" + pad2(+m[2]) + "-" + pad2(+m[1]);
+      const t = new Date(v); if (!isNaN(t)) return t.getFullYear() + "-" + pad2(t.getMonth()+1) + "-" + pad2(t.getDate());
+      return "";
+    };
     const grp = $("dGroup").value.trim().toUpperCase();
     const cat = des => { des = String(des || "").toUpperCase(); return des.includes("ALP") ? "alp" : des.includes("LP") ? "lp" : null; };
     let from = $("dFrom").value, to = $("dTo").value;
-    const dates = rs.map(r => String(r[DK] || "").slice(0,10)).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
-    const today = new Date().toISOString().slice(0,10);
+    const dates = rs.map(r => dKey(r[DK])).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+    const today = new Date().getFullYear() + "-" + pad2(new Date().getMonth()+1) + "-" + pad2(new Date().getDate());
     if (!from) from = dates[0] || today;
     if (!to) to = (dates.length && dates[dates.length-1] > today) ? dates[dates.length-1] : today;
     const per = {}, seen = {lp:new Set(), alp:new Set()};
     rs.forEach(r => {
-      const d = String(r[DK] || "").slice(0,10);
+      const d = dKey(r[DK]);
       if (!d || d < from || d > to) return;
       if (grp && String(r["CLI NAME"] || "").trim().toUpperCase() !== grp) return;
       const c = cat(r["DESIGNATION"]); if (!c) return;
@@ -646,17 +661,22 @@ async function dateWise(){
       if (grp && String(c.cli || "").trim().toUpperCase() !== grp) return;
       const k = cat(c.designation); if (k) totalCrew[k]++;
     });
+    const lbl = sheetName === "BFT BPT" ? "BFT BPT DONE" : "COUNSELLED";
+    $("dateTitle").textContent = "SUMMARY - DATE WISE " + (sheetName === "BFT BPT" ? "BFT BPT" : "COUNSELLING") + " (LP / ALP)";
+    $("dateLpH").textContent = "LP " + lbl; $("dateAlpH").textContent = "ALP " + lbl;
     const tl = days.reduce((a,d) => a + (per[d] ? per[d].lp : 0), 0);
     const ta = days.reduce((a,d) => a + (per[d] ? per[d].alp : 0), 0);
     const remL = Math.max(0, totalCrew.lp - seen.lp.size), remA = Math.max(0, totalCrew.alp - seen.alp.size);
     $("dateBody").innerHTML = days.map(d => `<tr><td>${ddmmyyyy(d)}</td><td>${per[d] ? per[d].lp : 0}</td><td>${per[d] ? per[d].alp : 0}</td></tr>`).join("") +
-      `<tr class="tot"><td><b>TOTAL COUNSELLED</b></td><td><b>${tl}</b></td><td><b>${ta}</b></td></tr>` +
+      `<tr class="tot"><td><b>TOTAL ${lbl}</b></td><td><b>${tl}</b></td><td><b>${ta}</b></td></tr>` +
+      `<tr><td>UNIQUE CREW COVERED</td><td>${seen.lp.size}</td><td>${seen.alp.size}</td></tr>` +
       `<tr class="rem"><td>REMAINING</td><td>${remL}</td><td>${remA}</td></tr>`;
     CUR = {
-      headers: ["DATE","LP COUNSELLED","ALP COUNSELLED"],
-      out: days.map(d => ({"DATE":ddmmyyyy(d), "LP COUNSELLED":per[d] ? per[d].lp : 0, "ALP COUNSELLED":per[d] ? per[d].alp : 0}))
-        .concat([{"DATE":"TOTAL COUNSELLED","LP COUNSELLED":tl,"ALP COUNSELLED":ta},
-                 {"DATE":"REMAINING","LP COUNSELLED":remL,"ALP COUNSELLED":remA}]),
+      headers: ["DATE","LP " + lbl,"ALP " + lbl],
+      out: days.map(d => ({"DATE":ddmmyyyy(d), ["LP " + lbl]:per[d] ? per[d].lp : 0, ["ALP " + lbl]:per[d] ? per[d].alp : 0}))
+        .concat([{"DATE":"TOTAL " + lbl, ["LP " + lbl]:tl, ["ALP " + lbl]:ta},
+                 {"DATE":"UNIQUE CREW COVERED", ["LP " + lbl]:seen.lp.size, ["ALP " + lbl]:seen.alp.size},
+                 {"DATE":"REMAINING", ["LP " + lbl]:remL, ["ALP " + lbl]:remA}]),
       DK: ""
     };
     showDate(true); dm.textContent = "";
@@ -1185,7 +1205,7 @@ $("doneBack").onclick = () => { showDone(false); if (rows.length) renderDash(Obj
 $("consCli").onchange = consolidate;
 $("consBack").onclick = () => { showCons(false); if (rows.length) renderDash(Object.keys(rows[0])); };
 $("dType").onchange = () => { $("dCli").value = ""; $("dGroup").value = ""; $("consCli").value = "";
-  const wasCons = CONS_ON, wasHq = HQ_ON; loadDash().then(() => { if (wasCons) consolidate(); if (wasHq) hqWise(); }); };
+  const wasCons = CONS_ON, wasHq = HQ_ON, wasDate = DATE_ON; loadDash().then(() => { if (wasCons) consolidate(); if (wasHq) hqWise(); if (wasDate) dateWise(); }); };
 loadCrew();
 ["dFrom","dTo"].forEach(id => $(id).oninput = () => { refresh(); loadTicker(); });
 </script>
