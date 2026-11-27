@@ -421,6 +421,12 @@ function build(type){
     ? '<span style="font-size:1.25em;color:#0b5ed7">DAILY MONITORING OF BFT, BPT, CONTINUITY TEST AND ONE TO ONE CREW COUNSELLING</span>'
     : headDef();
   fieldsDiv.innerHTML = "";
+  if (type === "FSD AMBUSH"){
+    const nt = document.createElement("div"); nt.className = "full";
+    nt.style.cssText = "color:#d50000;font-weight:700;font-size:9px;background:#fff;border:1px solid #d50000;padding:5px 8px";
+    nt.textContent = "NOTE: SELECT 'OTHER' IN CREW ID (LP ID / ALP ID) TO FEED OUT STATION DATA MANUALLY.";
+    fieldsDiv.appendChild(nt);
+  }
   (FIELDS[type] || []).forEach(f => {
     const d = document.createElement("div");
     if (f.t === "area") d.className = "full";
