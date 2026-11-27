@@ -15,7 +15,7 @@
   .tab{padding:10px 22px;cursor:pointer;background:#e3e8f1;border:1px solid var(--line);border-bottom:none;font-weight:600;color:var(--navy)}
   .tab.active{background:#e6e8eb;border-top:3px solid var(--gold)}
   .wrap{max-width:1375px;margin:0 auto;padding:0 16px 40px}
-  .card{background:#e6e8eb;border:1px solid var(--line);padding:18px;margin-bottom:16px}
+  .card{background:#8d939c;border:1px solid var(--line);padding:18px;margin-bottom:16px}
   label{display:block;font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px;text-transform:uppercase}
   input,select,textarea{width:100%;padding:9px;border:1px solid #b9c1d0;font-size:14px;background:#fff}
   textarea{min-height:70px;resize:vertical}
@@ -139,9 +139,9 @@
 </head>
 <body>
 <div id="ov"><div id="ovBox"></div></div>
-<header><h1>SECR RAIPUR DIVISION <small>| CREW ENTRY &amp; DASHBOARD</small></h1></header>
+<header><h1>SECR RAIPUR DIVISION <small>| DATA ENTRY &amp; DASHBOARD</small></h1></header>
 
-<h2 class="fhead" id="mainHead"><span style="font-size:0.8em">RAILWAY BOARD SAFETY DRIVE</span><br><span style="font-size:1.25em;color:#0b5ed7">DAILY MONITORING OF BFT, BPT, CONTINUITY TEST AND ONE TO ONE CREW COUNSELLING</span></h2>
+<h2 class="fhead" id="mainHead"><span style="font-size:1.25em;color:#0b5ed7">SAFETY DRIVES</span></h2>
 
 <div id="cliwTick" style="margin:12px 16px 0"></div>
 
@@ -389,15 +389,37 @@ document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
   $("form").classList.toggle("hide", t.dataset.t !== "form");
   $("dash").classList.toggle("hide", t.dataset.t !== "dash");
   document.body.classList.toggle("full", t.dataset.t === "dash");
+  updateHead();
   if (t.dataset.t === "dash") loadDash();
 });
+/* heading follows the open tab: dashboard shows FSD AMBUSH heading when that sheet is selected */
+function updateHead(){
+  if (!$("dash").classList.contains("hide")){
+    $("mainHead").innerHTML = $("dType").value === "FSD AMBUSH"
+      ? '<span style="font-size:1.25em;color:#0b5ed7">DRIVE FOR FSD AMBUSH CHECK</span>'
+      : headDef();
+  } else build(typeSel.value);
+}
 
 /* ---- build form ---- */
-const HEAD_DEF = $("mainHead").innerHTML;
+/* editable main heading (shown when no form type is selected); saved in this browser */
+let HEAD_TXT = "SAFETY DRIVES";
+try{ HEAD_TXT = localStorage.getItem("mainHeadTxt") || HEAD_TXT; }catch(e){}
+const headDef = () => '<span id="headEdit" contenteditable="true" spellcheck="false" title="CLICK TO EDIT HEADING" style="font-size:1.25em;color:#0b5ed7;outline:none;border-bottom:1px dashed #9bb7e8;padding:0 6px">' + HEAD_TXT.replace(/&/g,"&amp;").replace(/</g,"&lt;") + '</span>';
+$("mainHead").addEventListener("input", e => {
+  if (e.target.id !== "headEdit") return;
+  HEAD_TXT = e.target.textContent;
+  try{ localStorage.setItem("mainHeadTxt", HEAD_TXT); }catch(err){}
+});
+$("mainHead").addEventListener("keydown", e => { if (e.target.id === "headEdit" && e.key === "Enter"){ e.preventDefault(); e.target.blur(); } });
+$("mainHead").addEventListener("blur", e => { if (e.target.id === "headEdit" && !e.target.textContent.trim()){ HEAD_TXT = "SAFETY DRIVES"; e.target.textContent = HEAD_TXT; try{ localStorage.setItem("mainHeadTxt", HEAD_TXT); }catch(err){} } }, true);
+$("mainHead").innerHTML = headDef();
 function build(type){
   $("mainHead").innerHTML = type === "FSD AMBUSH"
     ? '<span style="font-size:1.25em;color:#0b5ed7">DRIVE FOR FSD AMBUSH CHECK</span>'
-    : HEAD_DEF;
+    : (type === "COUNSELLING" || type === "BFT BPT")
+    ? '<span style="font-size:1.25em;color:#0b5ed7">DAILY MONITORING OF BFT, BPT, CONTINUITY TEST AND ONE TO ONE CREW COUNSELLING</span>'
+    : headDef();
   fieldsDiv.innerHTML = "";
   (FIELDS[type] || []).forEach(f => {
     const d = document.createElement("div");
@@ -484,21 +506,40 @@ async function loadCrew(){
     st.className = "err"; st.textContent = "CREW LOAD FAILED: " + err.message;
   }
 }
+/* FSD AMBUSH: "OTHER" in LP ID / ALP ID dropdown -> dependent fields typed manually */
+const MANUAL_SET = {"LP ID":["LP NAME","CLI NAME","DESIGNATION","HQ"], "ALP ID":["ALP NAME","ALP GROUP CLI"]};
+function setManual(inp, on){
+  const names = MANUAL_SET[inp.name] || [];
+  if (on) inp.dataset.manual = "1"; else delete inp.dataset.manual;
+  names.forEach(n => {
+    const el = form.elements[n]; if (!el) return;
+    el.readOnly = !on; el.tabIndex = on ? 0 : -1;
+    el.placeholder = on ? "TYPE MANUALLY" : "AUTO FILL";
+    el.value = "";
+  });
+  inp.placeholder = on ? "TYPE " + inp.name + " MANUALLY" : "CLICK TO SELECT / TYPE " + inp.name;
+}
 function attachCombo(inp, wrap){
   const dd = document.createElement("div"); dd.className = "dd"; wrap.appendChild(dd);
-  const show = () => {
+  const canOther = () => typeSel.value === "FSD AMBUSH" && !!MANUAL_SET[inp.name];
+  const OTHER_ROW = '<div data-other="1" style="background:#fff3cd"><b>OTHER</b> &mdash; ENTER ALL DETAILS MANUALLY</div>';
+  const show = (e) => {
+    if (inp.dataset.manual && e && e.type === "input") { dd.style.display = "none"; return; }
     const q = inp.value.trim().toUpperCase();
     const items = CREW_LIST.filter(c => !q || String(c.id).toUpperCase().includes(q) ||
       String(c.name).toUpperCase().includes(q)).slice(0, 100);
-    dd.innerHTML = items.length
+    dd.innerHTML = (canOther() ? OTHER_ROW : "") + (items.length
       ? items.map(c => `<div data-id="${esc(c.id)}"><b>${esc(c.id)}</b> &mdash; ${esc(c.name || "")}</div>`).join("")
-      : `<div style="color:#888;cursor:default">${CREW_LIST.length ? "NO MATCH" : "CREW LIST NOT LOADED"}</div>`;
+      : `<div style="color:#888;cursor:default">${CREW_LIST.length ? "NO MATCH" : "CREW LIST NOT LOADED"}</div>`);
     dd.style.display = "block";
   };
   ["focus","click","input"].forEach(ev => inp.addEventListener(ev, show));
   dd.addEventListener("mousedown", e => {
+    const o = e.target.closest("[data-other]");
+    if (o){ e.preventDefault(); setManual(inp, true); inp.value = ""; dd.style.display = "none"; inp.focus(); return; }
     const t = e.target.closest("[data-id]"); if (!t) return;
     e.preventDefault();
+    if (inp.dataset.manual) setManual(inp, false);
     inp.value = t.dataset.id; dd.style.display = "none"; lookupFor(inp);
   });
   inp.addEventListener("blur", () => setTimeout(() => dd.style.display = "none", 150));
@@ -507,7 +548,7 @@ fieldsDiv.addEventListener("input", e => {
   if (!ID_FIELDS.includes(e.target.name)) return;
   lookupFor(e.target);
 });
-function lookupFor(el){ if (el.name === "ALP ID") lookupAlp(el.value.trim()); else lookupCms(el.value.trim()); }
+function lookupFor(el){ if (el.dataset.manual) return; if (el.name === "ALP ID") lookupAlp(el.value.trim()); else lookupCms(el.value.trim()); }
 function lookupAlp(id){
   const j = id ? CREW[id.toUpperCase()] : null;
   const n = form.elements["ALP NAME"], c = form.elements["ALP GROUP CLI"];
@@ -1491,7 +1532,7 @@ $("dateBack").onclick = () => { showDate(false); if (rows.length) renderDash(Obj
 $("doneBack").onclick = () => { showDone(false); if (rows.length) renderDash(Object.keys(rows[0])); };
 $("consCli").onchange = consolidate;
 $("consBack").onclick = () => { showCons(false); if (rows.length) renderDash(Object.keys(rows[0])); };
-$("dType").onchange = () => { $("dAbnW").classList.toggle("hide", $("dType").value !== "FSD AMBUSH"); $("dCli").value = ""; $("dGroup").value = ""; $("consCli").value = "";
+$("dType").onchange = () => { updateHead(); $("dAbnW").classList.toggle("hide", $("dType").value !== "FSD AMBUSH"); $("dCli").value = ""; $("dGroup").value = ""; $("consCli").value = "";
   const wasCons = CONS_ON, wasHq = HQ_ON, wasDate = DATE_ON, wasCliw = CLIW_ON; loadDash().then(() => { if (wasCons) consolidate(); if (wasHq) hqWise(); if (wasDate) dateWise(); if (wasCliw) cliWise(); }); };
 loadCrew();
 ["dFrom","dTo"].forEach(id => $(id).oninput = () => { refresh(); loadTicker(); });
