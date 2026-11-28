@@ -39,7 +39,6 @@
   tr:nth-child(even) td{background:#f8f9fc}
   th.rm,td.rm{white-space:normal;word-wrap:break-word;overflow-wrap:anywhere;width:260px;min-width:200px;max-width:260px;text-align:left}
   .hide{display:none!important}
-  td.abn{background:#ffcdd2!important;color:#b00020;font-weight:700}
   #ov{position:fixed;inset:0;background:rgba(11,37,69,.55);display:none;align-items:center;justify-content:center;z-index:999}
   #ov.show{display:flex}
   #ovBox{background:#fff;border-top:5px solid var(--gold);padding:28px 40px;min-width:280px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.35);animation:pop .25s ease-out}
@@ -159,7 +158,6 @@
       <option value="">-- SELECT --</option>
       <option value="COUNSELLING">COUNSELLING</option>
       <option value="BFT BPT">BFT BPT</option>
-      <option value="FSD AMBUSH">FSD AMBUSH</option>
     </select>
     <div id="crewStatus" style="font-size:12px;font-weight:700;margin-top:6px"></div>
   </div>
@@ -178,7 +176,7 @@
   <div class="card">
     <div class="bar">
       <div><label>Sheet</label>
-        <select id="dType"><option>COUNSELLING</option><option>BFT BPT</option><option>FSD AMBUSH</option></select></div>
+        <select id="dType"><option>COUNSELLING</option><option>BFT BPT</option></select></div>
       <div><label>From</label><input type="date" id="dFrom"></div>
       <div><label>To</label><input type="date" id="dTo"></div>
       <div><label>Done By CLI</label>
@@ -195,7 +193,6 @@
       <div><button id="dHq" type="button" class="cn" style="background:#00838f">HQ WISE DATA</button></div>
       <div><button id="dCrewW" type="button" class="cn" style="background:#6a1b9a">CREW WISE REPORT</button></div>
       <div><button id="dRepSum" type="button" class="cn" style="background:#ad1457">REPEAT COUNT SUMMARY</button></div>
-      <div id="dAbnW" class="hide"><button id="dAbn" type="button" class="cn" style="background:#b71c1c">ABNORMALITY REPORT</button></div>
       <div><button id="dUniq" type="button" class="xl" style="background:#4e342e">UNIQUE CREW EXCEL</button></div>
     </div>
     <div id="pie" class="pie"></div>
@@ -239,16 +236,10 @@
         <div class="tblwrap"><table><thead><tr><th>S.NO</th><th>CMS ID</th><th>CREW NAME</th><th>DESIGNATION</th><th>HQ</th><th>GROUP CLI</th><th>REPEAT COUNT</th><th>ENTRY DATES</th><th>DONE BY CLI</th></tr></thead><tbody id="crewwDetBody"></tbody></table></div></div>
       <div class="tblwrap" id="crewwMainT"><table><thead><tr><th>S.NO</th><th>CMS ID</th><th>CREW NAME</th><th>DESIGNATION</th><th>HQ</th><th>GROUP CLI</th><th>REPEAT COUNT</th><th>FIRST DATE</th><th>LAST DATE</th></tr></thead><tbody id="crewwBody"></tbody></table></div>
     </div>
-    <div id="abn" class="hide">
-      <div style="margin-bottom:8px;font-weight:700;color:var(--navy)"><span id="abnTitle">ABNORMALITY REPORT - FSD AMBUSH</span>
-        <button type="button" class="alt" id="abnBack" style="margin-left:12px;padding:6px 14px">BACK TO ENTRIES</button></div>
-      <div class="stats" id="abnSum"></div>
-      <div class="tblwrap"><table><thead id="abnHead"></thead><tbody id="abnBody"></tbody></table></div>
-    </div>
     <div id="done" class="hide">
       <div style="margin-bottom:8px;font-weight:700;color:var(--navy)">DONE BY REPORT - NO. OF TIMES EACH CLI NAME IS REPEATED (DONE BY CLI)
         <button type="button" class="alt" id="doneBack" style="margin-left:12px;padding:6px 14px">BACK TO ENTRIES</button></div>
-      <div class="tblwrap"><table><thead><tr><th>CLI NAME</th><th>COUNSELLING</th><th>BFT BPT</th><th>FSD AMBUSH</th><th>TOTAL</th></tr></thead><tbody id="doneBody"></tbody></table></div>
+      <div class="tblwrap"><table><thead><tr><th>CLI NAME</th><th>COUNSELLING</th><th>BFT BPT</th><th>TOTAL</th></tr></thead><tbody id="doneBody"></tbody></table></div>
     </div>
     <div id="hqw" class="hide">
       <div style="margin-bottom:8px;font-weight:700;color:var(--navy)"><span id="hqTitle">HQ WISE DATA - CREW COVERAGE</span>
@@ -303,63 +294,12 @@ const FIELDS = {
     {n:"CHECKED THROUGH FP/RTIS/SPM", t:"select", o:["FP","RTIS","SPM"]},
     {n:"DONE BY CLI", t:"select", o:[]},
     {n:"REMARKS", t:"area"}
-  ],
-  "FSD AMBUSH": [
-    {n:"DATE", t:"date"},
-    {n:"LP ID", t:"text"},
-    {n:"LP NAME", t:"text"},
-    {n:"CLI NAME", l:"GROUP CLI", t:"text"},
-    {n:"DESIGNATION", t:"text"},
-    {n:"HQ", t:"text"},
-    {n:"TRAIN NO", t:"text"},
-    {n:"LOCO NO", t:"text"},
-    {n:"ALP ID", t:"text"},
-    {n:"ALP NAME", t:"text"},
-    {n:"ALP GROUP CLI", t:"text"},
-    {n:"FSD ACTIVE", t:"select", o:YN},
-    {n:"ROUTE PROPER SET", t:"select", o:YN},
-    {n:"ROUTE CHANGING WITH DIVERSION", t:"select", o:YN},
-    {n:"VOLUME SET", t:"select", o:["MIN","MAX","DEFAULT"]},
-    {n:"VERSION", t:"version"},
-    {n:"LAST UPDATED", t:"date", blank:true},
-    {n:"AMBUSH DONE BY CLI", t:"select", o:[]},
-    {n:"REMARKS", t:"area"}
   ]
 };
-/* FSD AMBUSH form saves into the "FSD CHECK" sheet of the same Google Sheet */
-const SHEET_OF = t => t === "FSD AMBUSH" ? "FSD CHECK" : t;
-/* fetch a sheet for the dashboard; FSD CHECK rows are mapped to the common column names used by all reports */
-async function getSheet(n){
-  const j = await api(API_URL + "?sheet=" + encodeURIComponent(SHEET_OF(n)));
-  if (n === "FSD AMBUSH" && j && j.rows){
-    const out = [];
-    j.rows.forEach(r => {
-      r["CMS ID"] = r["LP ID"] || "";
-      r["CREW NAME"] = r["LP NAME"] || "";
-      r["DONE BY CLI"] = r["AMBUSH DONE BY CLI"] || "";
-      out.push(r);
-      const aid = String(r["ALP ID"] || "").trim();
-      if (aid){
-        const c = CREW[aid.toUpperCase()];
-        out.push(Object.assign({}, r, {
-          _alp: true,
-          "CMS ID": aid,
-          "CREW NAME": r["ALP NAME"] || "",
-          "CLI NAME": r["ALP GROUP CLI"] || "",
-          "DESIGNATION": c ? normDes(c.designation) : "ALP"
-        }));
-      }
-    });
-    j.rows = out;
-  }
-  return j;
-}
-const SHEETS3 = ["COUNSELLING","BFT BPT","FSD AMBUSH"];
-/* FSD AMBUSH form default selections */
-const FSD_DEF = {"FSD ACTIVE":"YES","ROUTE PROPER SET":"YES","ROUTE CHANGING WITH DIVERSION":"YES","VOLUME SET":"MAX"};
-const VER_DEF = "SW VERSION: SW V5.11 L & H/W VERSION: HW V4.2";
-const ID_FIELDS = ["CMS ID","LP ID","ALP ID"];
-const CLI_SEL = ["DONE BY CLI","AMBUSH DONE BY CLI"];
+async function getSheet(n){ return api(API_URL + "?sheet=" + encodeURIComponent(n)); }
+const SHEETS = ["COUNSELLING","BFT BPT"];
+const ID_FIELDS = ["CMS ID"];
+const CLI_SEL = ["DONE BY CLI"];
 
 const $ = id => document.getElementById(id);
 /* LPP / LPM are treated as LPG (counted under LP) */
@@ -392,13 +332,9 @@ document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
   updateHead();
   if (t.dataset.t === "dash") loadDash();
 });
-/* heading follows the open tab: dashboard shows FSD AMBUSH heading when that sheet is selected */
 function updateHead(){
-  if (!$("dash").classList.contains("hide")){
-    $("mainHead").innerHTML = $("dType").value === "FSD AMBUSH"
-      ? '<span style="font-size:1.25em;color:#0b5ed7">DRIVE FOR FSD AMBUSH CHECK</span>'
-      : headDef();
-  } else build(typeSel.value);
+  if (!$("dash").classList.contains("hide")) $("mainHead").innerHTML = headDef();
+  else build(typeSel.value);
 }
 
 /* ---- build form ---- */
@@ -415,18 +351,10 @@ $("mainHead").addEventListener("keydown", e => { if (e.target.id === "headEdit" 
 $("mainHead").addEventListener("blur", e => { if (e.target.id === "headEdit" && !e.target.textContent.trim()){ HEAD_TXT = "SAFETY DRIVES"; e.target.textContent = HEAD_TXT; try{ localStorage.setItem("mainHeadTxt", HEAD_TXT); }catch(err){} } }, true);
 $("mainHead").innerHTML = headDef();
 function build(type){
-  $("mainHead").innerHTML = type === "FSD AMBUSH"
-    ? '<span style="font-size:1.25em;color:#0b5ed7">DRIVE FOR FSD AMBUSH CHECK</span>'
-    : (type === "COUNSELLING" || type === "BFT BPT")
+  $("mainHead").innerHTML = (type === "COUNSELLING" || type === "BFT BPT")
     ? '<span style="font-size:1.25em;color:#0b5ed7">DAILY MONITORING OF BFT, BPT, CONTINUITY TEST AND ONE TO ONE CREW COUNSELLING</span>'
     : headDef();
   fieldsDiv.innerHTML = "";
-  if (type === "FSD AMBUSH"){
-    const nt = document.createElement("div"); nt.className = "full";
-    nt.style.cssText = "color:#d50000;font-weight:700;font-size:9px;background:#fff;border:1px solid #d50000;padding:5px 8px";
-    nt.textContent = "NOTE: SELECT 'OTHER' IN CREW ID (LP ID / ALP ID) TO FEED OUT STATION DATA MANUALLY.";
-    fieldsDiv.appendChild(nt);
-  }
   (FIELDS[type] || []).forEach(f => {
     const d = document.createElement("div");
     if (f.t === "area") d.className = "full";
@@ -450,24 +378,9 @@ function build(type){
       return;
     }
     let inp;
-    if (f.t === "version"){
-      inp = document.createElement("select");
-      inp.innerHTML = `<option>${esc(VER_DEF)}</option><option>OTHER</option>`;
-      inp.name = f.n;
-      d.className = "full";
-      d.innerHTML = `<label>${f.l || f.n}</label>`;
-      d.appendChild(inp);
-      const oth = document.createElement("input");
-      oth.type = "text"; oth.id = "verOther"; oth.placeholder = "TYPE VERSION"; oth.className = "hide"; oth.style.marginTop = "6px";
-      d.appendChild(oth);
-      inp.onchange = () => { oth.classList.toggle("hide", inp.value !== "OTHER"); if (inp.value === "OTHER") oth.focus(); };
-      fieldsDiv.appendChild(d);
-      return;
-    }
     if (f.t === "select"){
       inp = document.createElement("select");
       inp.innerHTML = '<option value="">-- SELECT --</option>' + (CLI_SEL.includes(f.n) ? CLI_LIST : f.o).map(o => `<option>${esc(o)}</option>`).join("");
-      if (type === "FSD AMBUSH" && FSD_DEF[f.n]) inp.value = FSD_DEF[f.n];
     } else if (f.t === "area"){
       inp = document.createElement("textarea");
     } else {
@@ -497,7 +410,7 @@ async function loadCrew(){
     CREW = {}; CREW_LIST = (j.crew || []).map(c => { c.designation = normDes(c.designation); return c; });
     CLI_LIST = j.clis || [];
     fillCliFilter(rows);
-    document.querySelectorAll('select[name="DONE BY CLI"], select[name="AMBUSH DONE BY CLI"]').forEach(el => {
+    document.querySelectorAll('select[name="DONE BY CLI"]').forEach(el => {
       const v = el.value;
       el.innerHTML = '<option value="">-- SELECT --</option>' + CLI_LIST.map(o => `<option>${esc(o)}</option>`).join("");
       el.value = v;
@@ -512,40 +425,21 @@ async function loadCrew(){
     st.className = "err"; st.textContent = "CREW LOAD FAILED: " + err.message;
   }
 }
-/* FSD AMBUSH: "OTHER" in LP ID / ALP ID dropdown -> dependent fields typed manually */
-const MANUAL_SET = {"LP ID":["LP NAME","CLI NAME","DESIGNATION","HQ"], "ALP ID":["ALP NAME","ALP GROUP CLI"]};
-function setManual(inp, on){
-  const names = MANUAL_SET[inp.name] || [];
-  if (on) inp.dataset.manual = "1"; else delete inp.dataset.manual;
-  names.forEach(n => {
-    const el = form.elements[n]; if (!el) return;
-    el.readOnly = !on; el.tabIndex = on ? 0 : -1;
-    el.placeholder = on ? "TYPE MANUALLY" : "AUTO FILL";
-    el.value = "";
-  });
-  inp.placeholder = on ? "TYPE " + inp.name + " MANUALLY" : "CLICK TO SELECT / TYPE " + inp.name;
-}
 function attachCombo(inp, wrap){
   const dd = document.createElement("div"); dd.className = "dd"; wrap.appendChild(dd);
-  const canOther = () => typeSel.value === "FSD AMBUSH" && !!MANUAL_SET[inp.name];
-  const OTHER_ROW = '<div data-other="1" style="background:#fff3cd"><b>OTHER</b> &mdash; ENTER ALL DETAILS MANUALLY</div>';
-  const show = (e) => {
-    if (inp.dataset.manual && e && e.type === "input") { dd.style.display = "none"; return; }
+  const show = () => {
     const q = inp.value.trim().toUpperCase();
     const items = CREW_LIST.filter(c => !q || String(c.id).toUpperCase().includes(q) ||
       String(c.name).toUpperCase().includes(q)).slice(0, 100);
-    dd.innerHTML = (canOther() ? OTHER_ROW : "") + (items.length
+    dd.innerHTML = (items.length
       ? items.map(c => `<div data-id="${esc(c.id)}"><b>${esc(c.id)}</b> &mdash; ${esc(c.name || "")}</div>`).join("")
       : `<div style="color:#888;cursor:default">${CREW_LIST.length ? "NO MATCH" : "CREW LIST NOT LOADED"}</div>`);
     dd.style.display = "block";
   };
   ["focus","click","input"].forEach(ev => inp.addEventListener(ev, show));
   dd.addEventListener("mousedown", e => {
-    const o = e.target.closest("[data-other]");
-    if (o){ e.preventDefault(); setManual(inp, true); inp.value = ""; dd.style.display = "none"; inp.focus(); return; }
     const t = e.target.closest("[data-id]"); if (!t) return;
     e.preventDefault();
-    if (inp.dataset.manual) setManual(inp, false);
     inp.value = t.dataset.id; dd.style.display = "none"; lookupFor(inp);
   });
   inp.addEventListener("blur", () => setTimeout(() => dd.style.display = "none", 150));
@@ -554,15 +448,7 @@ fieldsDiv.addEventListener("input", e => {
   if (!ID_FIELDS.includes(e.target.name)) return;
   lookupFor(e.target);
 });
-function lookupFor(el){ if (el.dataset.manual) return; if (el.name === "ALP ID") lookupAlp(el.value.trim()); else lookupCms(el.value.trim()); }
-function lookupAlp(id){
-  const j = id ? CREW[id.toUpperCase()] : null;
-  const n = form.elements["ALP NAME"], c = form.elements["ALP GROUP CLI"];
-  if (!j){ if (n) n.value = ""; if (c) c.value = ""; return; }
-  if (n) n.value = j.name || "";
-  if (c) c.value = j.cli || "";
-  msg.className = "msg ok"; msg.textContent = "ALP DETAILS FILLED";
-}
+function lookupFor(el){ lookupCms(el.value.trim()); }
 function clearAuto(){
   ["CREW NAME","LP NAME","DESIGNATION","HQ","CLI NAME"].forEach(n => { const el = form.elements[n]; if (el) el.value = ""; });
 }
@@ -612,17 +498,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 form.onsubmit = async e => {
   e.preventDefault();
   if (API_URL.startsWith("PASTE")) { msg.className="msg err"; msg.textContent="SET API_URL FIRST"; return; }
-  const idEl = form.elements["CMS ID"] || form.elements["LP ID"];
+  const idEl = form.elements["CMS ID"];
   const cid = ((idEl && idEl.value) || "").trim().toUpperCase();
   if (CREW_LIST.length && !CREW[cid]){ msg.className="msg err"; msg.textContent="SELECT A VALID " + (idEl ? idEl.name : "CMS ID") + " FROM THE LIST"; return; }
-  const aEl = form.elements["ALP ID"];
-  if (aEl && aEl.value.trim() && CREW_LIST.length && !CREW[aEl.value.trim().toUpperCase()]){ msg.className="msg err"; msg.textContent="SELECT A VALID ALP ID FROM THE LIST"; return; }
   const data = {}; new FormData(form).forEach((v,k) => { if (k) data[k] = v; });
-  if (data["VERSION"] === "OTHER"){
-    const ov2 = ($("verOther").value || "").trim();
-    if (!ov2){ msg.className="msg err"; msg.textContent="TYPE THE VERSION"; return; }
-    data["VERSION"] = ov2;
-  }
   (FIELDS[typeSel.value] || []).filter(f => f.t === "check").forEach(f => {
     const cb = form.elements[f.n];
     data[f.n] = (cb && cb.checked) ? "YES" : "NO";
@@ -632,9 +511,9 @@ form.onsubmit = async e => {
   try{
     await fetch(API_URL, {method:"POST", mode:"no-cors",
       headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body: JSON.stringify({sheet: SHEET_OF(typeSel.value), data})});
+      body: JSON.stringify({sheet: typeSel.value, data})});
     await wait(700);
-    const sh = SHEET_OF(typeSel.value);
+    const sh = typeSel.value;
     build(typeSel.value); msg.className="msg ok"; msg.textContent="SAVED TO " + sh + " SHEET";
     ovSaved();
   }catch(err){ msg.className="msg err"; msg.textContent="FAILED: " + err.message; ovFailed(err.message); }
@@ -642,19 +521,18 @@ form.onsubmit = async e => {
 };
 
 /* ---- dashboard ---- */
-let CLIW_ON = false, BAR = null, CREWW_ON = false, ABN_ON = false;
+let CLIW_ON = false, BAR = null, CREWW_ON = false;
 let CONS_ON = false, DONE_ON = false, DATE_ON = false, DET_ON = false, DET_TITLE = "", UNC_MAP = {}, HQ_ON = false, DET_FROM = "cons";
 let rows = [], CUR = {headers:[], out:[], DK:""};
 const cellVal = (r,h,DK) => h === DK ? String(r[h] ?? "").slice(0,10) : String(r[h] ?? "");
 function reportTitle(){
-  if (ABN_ON) return "ABNORMALITY REPORT (FSD AMBUSH) - FSD ACTIVE NO / ROUTE PROPER SET NO / ROUTE CHANGING WITH DIVERSION NO / VOLUME SET MIN / VERSION OTHER" + (($("dFrom").value || $("dTo").value) ? " | DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY") : "");
   if (DET_ON) return DET_TITLE;
   if (CLIW_ON && CLIW_DET) return "CLI WISE REPORT - DATE WISE BREAKUP - " + CLIW_DET + " (" + CLIW_COL + ")" + (($("dFrom").value || $("dTo").value) ? " | DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY") : "");
   if (CREWW_ON && SUM_DET_TITLE) return SUM_DET_TITLE;
   if (CREWW_ON && CREWW_SUM) return "REPEAT COUNT SUMMARY (" + $("dType").value + ") - DESIGNATION WISE NO OF LP / ALP PER REPEAT COUNT" + (($("dFrom").value || $("dTo").value) ? " | DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY") : "");
   if (CREWW_ON) return "CREW WISE REPORT (" + $("dType").value + ") - REPEAT COUNT PER CMS ID" + (($("dFrom").value || $("dTo").value) ? " | DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY") : "");
   if (HQ_ON) return "HQ WISE DATA (" + $("dType").value + ") - CREW COVERAGE" + (($("dFrom").value || $("dTo").value) ? " | DATE: " + ($("dFrom").value || "START") + " TO " + ($("dTo").value || "TODAY") : "");
-  const f = [CONS_ON ? "CONSOLIDATE REPORT (" + $("dType").value + ")" : DONE_ON ? "DONE BY REPORT (COUNSELLING + BFT BPT + FSD AMBUSH)" : DATE_ON ? "SUMMARY - DATE WISE REPORT (" + $("dType").value + ")" : CLIW_ON ? "CLI WISE REPORT - " + $("dType").value + " DONE BY CLI (DESCENDING)" : $("dType").value];
+  const f = [CONS_ON ? "CONSOLIDATE REPORT (" + $("dType").value + ")" : DONE_ON ? "DONE BY REPORT (COUNSELLING + BFT BPT)" : DATE_ON ? "SUMMARY - DATE WISE REPORT (" + $("dType").value + ")" : CLIW_ON ? "CLI WISE REPORT - " + $("dType").value + " DONE BY CLI (DESCENDING)" : $("dType").value];
   if (CONS_ON) { if ($("consCli").value) f.push("CLI: " + $("consCli").value); }
   else if (!DONE_ON && !CLIW_ON && $("dGroup").value) f.push("GROUP CLI: " + $("dGroup").value);
   if (!CONS_ON && !DATE_ON && $("dCli").value) f.push("DONE BY CLI: " + $("dCli").value);
@@ -669,20 +547,18 @@ function applyView(){
   $("cliw").classList.toggle("hide", !CLIW_ON);
   $("hqw").classList.toggle("hide", !HQ_ON);
   $("creww").classList.toggle("hide", !CREWW_ON);
-  $("abn").classList.toggle("hide", !ABN_ON);
-  const any = ABN_ON || CONS_ON || DONE_ON || DATE_ON || DET_ON || CLIW_ON || HQ_ON || CREWW_ON;
+  const any = CONS_ON || DONE_ON || DATE_ON || DET_ON || CLIW_ON || HQ_ON || CREWW_ON;
   $("stats").classList.toggle("hide", any);
   $("pie").classList.toggle("hide", any);
   $("tblwrap").classList.toggle("hide", any);
 }
-function showAbn(on){ ABN_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = DET_ON = CLIW_ON = HQ_ON = CREWW_ON = false; applyView(); }
-function showCons(on){ CONS_ON = on; if (on) ABN_ON = DONE_ON = DATE_ON = DET_ON = CLIW_ON = HQ_ON = CREWW_ON = false; applyView(); }
-function showDone(on){ DONE_ON = on; if (on) ABN_ON = CONS_ON = DATE_ON = DET_ON = CLIW_ON = HQ_ON = CREWW_ON = false; applyView(); }
-function showDate(on){ DATE_ON = on; if (on) ABN_ON = CONS_ON = DONE_ON = DET_ON = CLIW_ON = HQ_ON = CREWW_ON = false; applyView(); }
-function showDet(on){ DET_ON = on; if (on) ABN_ON = CONS_ON = DONE_ON = DATE_ON = CLIW_ON = HQ_ON = CREWW_ON = false; applyView(); }
-function showCliw(on){ CLIW_ON = on; if (on) ABN_ON = CONS_ON = DONE_ON = DATE_ON = DET_ON = HQ_ON = CREWW_ON = false; applyView(); }
-function showCreww(on){ CREWW_ON = on; if (on) ABN_ON = CONS_ON = DONE_ON = DATE_ON = DET_ON = CLIW_ON = HQ_ON = false; applyView(); }
-function showHq(on){ HQ_ON = on; if (on) ABN_ON = CONS_ON = DONE_ON = DATE_ON = DET_ON = CLIW_ON = CREWW_ON = false; applyView(); }
+function showCons(on){ CONS_ON = on; if (on) DONE_ON = DATE_ON = DET_ON = CLIW_ON = HQ_ON = CREWW_ON = false; applyView(); }
+function showDone(on){ DONE_ON = on; if (on) CONS_ON = DATE_ON = DET_ON = CLIW_ON = HQ_ON = CREWW_ON = false; applyView(); }
+function showDate(on){ DATE_ON = on; if (on) CONS_ON = DONE_ON = DET_ON = CLIW_ON = HQ_ON = CREWW_ON = false; applyView(); }
+function showDet(on){ DET_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = CLIW_ON = HQ_ON = CREWW_ON = false; applyView(); }
+function showCliw(on){ CLIW_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = DET_ON = HQ_ON = CREWW_ON = false; applyView(); }
+function showCreww(on){ CREWW_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = DET_ON = CLIW_ON = HQ_ON = false; applyView(); }
+function showHq(on){ HQ_ON = on; if (on) CONS_ON = DONE_ON = DATE_ON = DET_ON = CLIW_ON = CREWW_ON = false; applyView(); }
 function cliList(j, from, to, sel){
   const rs = j.rows || [];
   const hs = j.headers || Object.keys(rs[0] || {});
@@ -730,7 +606,7 @@ function ticker(items){
 async function loadTicker(){
   if (API_URL.startsWith("PASTE")) return;
   try{
-    const names = SHEETS3;
+    const names = SHEETS;
     const res = await Promise.all(names.map(n => getSheet(n)));
     const from = $("dFrom").value, to = $("dTo").value;
     ticker(names.map((n,i) => ({sheet:n, list:cliList(res[i], from, to, "")})));
@@ -753,13 +629,13 @@ async function cliWise(){
   const dm = $("dmsg");
   dm.className="msg"; dm.textContent="BUILDING CLI WISE REPORT...";
   try{
-    const names = SHEETS3;
+    const names = SHEETS;
     const res = await Promise.all(names.map(n => getSheet(n)));
     const from = $("dFrom").value, to = $("dTo").value, sel = $("dCli").value.trim().toUpperCase();
     const lists = res.map(j => cliList(j, from, to, sel));
-    const sel0 = Math.max(0, SHEETS3.indexOf($("dType").value));
+    const sel0 = Math.max(0, SHEETS.indexOf($("dType").value));
     const list = lists[sel0];
-    const colN = SHEETS3[sel0] + " DONE";
+    const colN = SHEETS[sel0] + " DONE";
     $("cliwColH").textContent = colN;
     $("cliwTitle").textContent = "CLI WISE REPORT - NO. OF " + colN + " BY EACH CLI (DESCENDING)";
     const total = list.reduce((a,o) => a + o.n, 0);
@@ -865,8 +741,8 @@ async function dateWise(){
       if (grp && String(c.cli || "").trim().toUpperCase() !== grp) return;
       const k = cat(c.designation); if (k) totalCrew[k]++;
     });
-    const lbl = sheetName === "BFT BPT" ? "BFT BPT DONE" : sheetName === "FSD AMBUSH" ? "AMBUSH DONE" : "COUNSELLED";
-    $("dateTitle").textContent = "SUMMARY - DATE WISE " + (sheetName === "BFT BPT" ? "BFT BPT" : sheetName === "FSD AMBUSH" ? "FSD AMBUSH" : "COUNSELLING") + " (LP / ALP)";
+    const lbl = sheetName === "BFT BPT" ? "BFT BPT DONE" : "COUNSELLED";
+    $("dateTitle").textContent = "SUMMARY - DATE WISE " + (sheetName === "BFT BPT" ? "BFT BPT" : "COUNSELLING") + " (LP / ALP)";
     $("dateLpH").textContent = "LP " + lbl; $("dateAlpH").textContent = "ALP " + lbl;
     const tl = days.reduce((a,d) => a + (per[d] ? per[d].lp : 0), 0);
     const ta = days.reduce((a,d) => a + (per[d] ? per[d].alp : 0), 0);
@@ -890,7 +766,7 @@ async function doneBy(){
   const dm = $("dmsg");
   dm.className="msg"; dm.textContent="BUILDING DONE BY REPORT...";
   try{
-    const names = SHEETS3;
+    const names = SHEETS;
     const res = await Promise.all(names.map(n => getSheet(n)));
     const from = $("dFrom").value, to = $("dTo").value, sel = $("dCli").value.trim().toUpperCase();
     const g = {};
@@ -905,20 +781,20 @@ async function doneBy(){
         if (!nm) return;
         const k = nm.toUpperCase();
         if (sel && k !== sel) return;
-        const o = g[k] || (g[k] = {name:nm, c:[0,0,0]});
+        const o = g[k] || (g[k] = {name:nm, c:[0,0]});
         o.c[i]++;
       });
     });
-    const list = Object.values(g).sort((a,b) => (b.c[0]+b.c[1]+b.c[2]) - (a.c[0]+a.c[1]+a.c[2]) || a.name.localeCompare(b.name));
-    const tot = {name:"GRAND TOTAL", c:[0,0,0]};
-    list.forEach(o => { tot.c[0] += o.c[0]; tot.c[1] += o.c[1]; tot.c[2] += o.c[2]; });
+    const list = Object.values(g).sort((a,b) => (b.c[0]+b.c[1]) - (a.c[0]+a.c[1]) || a.name.localeCompare(b.name));
+    const tot = {name:"GRAND TOTAL", c:[0,0]};
+    list.forEach(o => { tot.c[0] += o.c[0]; tot.c[1] += o.c[1]; });
     const rowsOut = list.length > 1 ? list.concat([tot]) : list;
     $("doneBody").innerHTML = rowsOut.length
-      ? rowsOut.map(o => `<tr class="${o === tot ? "tot" : ""}"><td><b>${esc(o.name)}</b></td><td>${o.c[0]}</td><td>${o.c[1]}</td><td>${o.c[2]}</td><td><b>${o.c[0]+o.c[1]+o.c[2]}</b></td></tr>`).join("")
-      : '<tr><td colspan="5">NO DATA</td></tr>';
+      ? rowsOut.map(o => `<tr class="${o === tot ? "tot" : ""}"><td><b>${esc(o.name)}</b></td><td>${o.c[0]}</td><td>${o.c[1]}</td><td><b>${o.c[0]+o.c[1]}</b></td></tr>`).join("")
+      : '<tr><td colspan="4">NO DATA</td></tr>';
     CUR = {
-      headers: ["CLI NAME","COUNSELLING","BFT BPT","FSD AMBUSH","TOTAL"],
-      out: rowsOut.map(o => ({"CLI NAME":o.name, "COUNSELLING":o.c[0], "BFT BPT":o.c[1], "FSD AMBUSH":o.c[2], "TOTAL":o.c[0]+o.c[1]+o.c[2]})),
+      headers: ["CLI NAME","COUNSELLING","BFT BPT","TOTAL"],
+      out: rowsOut.map(o => ({"CLI NAME":o.name, "COUNSELLING":o.c[0], "BFT BPT":o.c[1], "TOTAL":o.c[0]+o.c[1]})),
       DK: ""
     };
     showDone(true); dm.textContent = "";
@@ -1049,59 +925,6 @@ async function hqWise(){
     showHq(true); dm.textContent = "";
   }catch(err){ dm.className="msg err"; dm.textContent="REPORT FAILED: " + err.message; }
 }
-function abnReasons(r){
-  const u = k => String(r[k] == null ? "" : r[k]).trim().toUpperCase();
-  const x = [];
-  if (u("FSD ACTIVE") === "NO") x.push(["FSD ACTIVE","FSD ACTIVE - NO"]);
-  if (u("ROUTE PROPER SET") === "NO") x.push(["ROUTE PROPER SET","ROUTE PROPER SET - NO"]);
-  if (u("ROUTE CHANGING WITH DIVERSION") === "NO") x.push(["ROUTE CHANGING WITH DIVERSION","ROUTE CHANGING WITH DIVERSION - NO"]);
-  if (u("VOLUME SET") === "MIN") x.push(["VOLUME SET","VOLUME SET - MIN"]);
-  const v = u("VERSION");
-  if (v && v !== VER_DEF.toUpperCase()) x.push(["VERSION","SOFTWARE VERSION - OTHER"]);
-  return x;
-}
-async function abnormal(){
-  const dm = $("dmsg");
-  if ($("dType").value !== "FSD AMBUSH"){ dm.className="msg err"; dm.textContent="SELECT FSD AMBUSH SHEET FIRST"; return; }
-  dm.className="msg"; dm.textContent="BUILDING ABNORMALITY REPORT...";
-  try{
-    const j = await getSheet("FSD AMBUSH");
-    const all = (j.rows || []).filter(r => !r._alp);
-    const hs = j.headers || (FIELDS["FSD AMBUSH"] || []).map(f => f.n);
-    const DK = hs.find(h => String(h).indexOf("DATE") > -1) || "TIMESTAMP";
-    const from = $("dFrom").value, to = $("dTo").value, cli = $("dCli").value.trim().toUpperCase(), grp = $("dGroup").value.trim().toUpperCase();
-    const inRange = all.filter(r => {
-      const d = String(r[DK] || "").slice(0,10);
-      if (from && d < from) return false;
-      if (to && d > to) return false;
-      if (cli && String(r["DONE BY CLI"] || "").trim().toUpperCase() !== cli) return false;
-      if (grp && String(r["CLI NAME"] || "").trim().toUpperCase() !== grp) return false;
-      return true;
-    });
-    const hit = inRange.map(r => ({r, why: abnReasons(r)})).filter(o => o.why.length);
-    hit.sort((a,b) => String(b.r[DK] || "").slice(0,10).localeCompare(String(a.r[DK] || "").slice(0,10)));
-    const cnt = {}; hit.forEach(o => o.why.forEach(w => cnt[w[1]] = (cnt[w[1]] || 0) + 1));
-    const ALL = ["FSD ACTIVE - NO","ROUTE PROPER SET - NO","ROUTE CHANGING WITH DIVERSION - NO","VOLUME SET - MIN","SOFTWARE VERSION - OTHER"];
-    $("abnSum").innerHTML = `<div class="stat"><b>${hit.length}</b>ABNORMAL ENTRIES (OF ${inRange.length})</div>` +
-      ALL.map(k => `<div class="stat"><b>${cnt[k] || 0}</b>${k}</div>`).join("");
-    const H = ["S.NO"].concat(hs, ["ABNORMALITY"]);
-    $("abnHead").innerHTML = "<tr>" + H.map(h => `<th${/REMARK/i.test(h) ? ' class="rm"' : ''}>${esc(h)}</th>`).join("") + "</tr>";
-    $("abnBody").innerHTML = hit.length ? hit.map((o,i) => {
-      const bad = new Set(o.why.map(w => w[0]));
-      return "<tr><td>" + (i+1) + "</td>" + hs.map(h => {
-        const v = h === DK ? String(o.r[h] ?? "").slice(0,10) : String(o.r[h] ?? "");
-        return `<td class="${(bad.has(h) ? "abn " : "") + (/REMARK/i.test(h) ? "rm" : "")}">${esc(v)}</td>`;
-      }).join("") + `<td class="abn" style="white-space:normal;text-align:left">${esc(o.why.map(w => w[1]).join(" | "))}</td></tr>`;
-    }).join("") : `<tr><td colspan="${H.length}">NO ABNORMALITY FOUND</td></tr>`;
-    CUR = {
-      headers: H,
-      out: hit.map((o,i) => { const row = {"S.NO": i+1}; hs.forEach(h => row[h] = o.r[h] ?? ""); row["ABNORMALITY"] = o.why.map(w => w[1]).join(" | "); return row; }),
-      DK
-    };
-    $("abnTitle").textContent = "ABNORMALITY REPORT (FSD AMBUSH) - " + hit.length + " ABNORMAL ENTRIES OF " + inRange.length;
-    showAbn(true); dm.textContent = "";
-  }catch(err){ dm.className="msg err"; dm.textContent="REPORT FAILED: " + err.message; }
-}
 async function consolidate(){
   const dm = $("dmsg");
   if (!CREW_LIST.length){ dm.className="msg err"; dm.textContent="CREW LIST NOT LOADED - CHECK 'CREW DATA' SHEET"; return; }
@@ -1174,11 +997,11 @@ async function consolidate(){
     showCons(true); dm.textContent = "";
   }catch(err){ dm.className="msg err"; dm.textContent="REPORT FAILED: " + err.message; }
 }
-const refresh = () => ABN_ON ? abnormal() : CREWW_ON ? crewWise() : HQ_ON ? hqWise() : (CONS_ON || DET_ON) ? (DET_FROM === "hq" ? hqWise() : consolidate()) : CLIW_ON ? cliWise() : DONE_ON ? doneBy() : DATE_ON ? dateWise() : (rows.length && renderDash(Object.keys(rows[0])));
+const refresh = () => CREWW_ON ? crewWise() : HQ_ON ? hqWise() : (CONS_ON || DET_ON) ? (DET_FROM === "hq" ? hqWise() : consolidate()) : CLIW_ON ? cliWise() : DONE_ON ? doneBy() : DATE_ON ? dateWise() : (rows.length && renderDash(Object.keys(rows[0])));
 function exportExcel(){
   const {headers, out, DK} = CUR;
   if (!out.length){ $("dmsg").className="msg err"; $("dmsg").textContent="NO DATA TO EXPORT"; return; }
-  const fname = (ABN_ON ? "ABNORMALITY_REPORT" : CREWW_ON ? (SUM_DET_TITLE ? "REPEAT_COUNT_DETAILS" : CREWW_SUM ? "REPEAT_COUNT_SUMMARY" : "CREW_WISE_REPORT") : DET_ON ? "UNCOVERED_CREW" : HQ_ON ? "HQ_WISE_DATA" : CONS_ON ? "CONSOLIDATE_REPORT" : DONE_ON ? "DONE_BY_REPORT" : DATE_ON ? "DATE_WISE_REPORT" : CLIW_ON ? "CLI_WISE_REPORT" : $("dType").value).replace(/\s+/g,"_") + "_" + new Date().toISOString().slice(0,10);
+  const fname = (CREWW_ON ? (SUM_DET_TITLE ? "REPEAT_COUNT_DETAILS" : CREWW_SUM ? "REPEAT_COUNT_SUMMARY" : "CREW_WISE_REPORT") : DET_ON ? "UNCOVERED_CREW" : HQ_ON ? "HQ_WISE_DATA" : CONS_ON ? "CONSOLIDATE_REPORT" : DONE_ON ? "DONE_BY_REPORT" : DATE_ON ? "DATE_WISE_REPORT" : CLIW_ON ? "CLI_WISE_REPORT" : $("dType").value).replace(/\s+/g,"_") + "_" + new Date().toISOString().slice(0,10);
   const html = '<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body><table border="1">' +
     '<tr><td colspan="' + headers.length + '"><b>' + esc(reportTitle()) + '</b></td></tr>' +
     '<tr>' + headers.map(h => `<th style="background:#0b2545;color:#fff;text-align:center">${esc(h)}</th>`).join("") + '</tr>' +
@@ -1217,7 +1040,7 @@ function exportPdf(){
   setTimeout(() => w.print(), 400);
 }
 async function loadDash(){
-  CONS_ON = false; DONE_ON = false; DATE_ON = false; DET_ON = false; CLIW_ON = false; HQ_ON = false; CREWW_ON = false; ABN_ON = false; applyView();
+  CONS_ON = false; DONE_ON = false; DATE_ON = false; DET_ON = false; CLIW_ON = false; HQ_ON = false; CREWW_ON = false; applyView();
   if (API_URL.startsWith("PASTE")) { $("dmsg").className="msg err"; $("dmsg").textContent="SET API_URL FIRST"; return; }
   $("dmsg").className="msg"; $("dmsg").textContent="LOADING...";
   try{
@@ -1399,9 +1222,11 @@ function crewWise(){
   };
   CREWW_MAIN = CUR;
   /* repeat count summary: designation -> repeat count -> no of crew (LP first, then ALP, then others) */
+  /* SALP is merged into ALP for the repeat count summary */
+  const mergeAlp = d => (String(d || "").trim().toUpperCase().replace(/\bSALP\b/g, "ALP")) || "NOT AVAILABLE";
   const sm = {};
   list.forEach(x => {
-    const d = String(x.des || "").trim().toUpperCase() || "NOT AVAILABLE";
+    const d = mergeAlp(x.des);
     const o = sm[d] || (sm[d] = {});
     o[x.n] = (o[x.n] || 0) + 1;
   });
@@ -1410,7 +1235,7 @@ function crewWise(){
   const desList = Object.keys(sm).sort((a,b) => (GRP.indexOf(grpOf(a)) - GRP.indexOf(grpOf(b))) || a.localeCompare(b));
   const sH = ["DESIGNATION","NO OF CREW","REPEAT COUNT","TOTAL ENTRIES"], sOut = [];
   SUM_DET = [];
-  const desOf = x => String(x.des || "").trim().toUpperCase() || "NOT AVAILABLE";
+  const desOf = x => mergeAlp(x.des);
   let sHtml = "", gCrew = 0, gEnt = 0;
   const addRow = (v, isTot, pick) => {
     const k = SUM_DET.push({label: v[0] + (v[2] === "" ? "" : " - REPEAT COUNT " + v[2]), items: list.filter(pick)}) - 1;
@@ -1504,8 +1329,6 @@ function uniqueCrewExcel(){
   dm.className="msg ok"; dm.textContent="UNIQUE CREW: " + list.length + " | IN LIST: " + nIn + " | NOT IN LIST: " + nOut;
 }
 $("dLoad").onclick = loadDash;
-$("dAbn").onclick = abnormal;
-$("abnBack").onclick = () => { showAbn(false); if (rows.length) renderDash(Object.keys(rows[0])); };
 $("dUniq").onclick = uniqueCrewExcel;
 $("dCrewW").onclick = () => { CREWW_SUM = false; crewWise(); };
 $("dRepSum").onclick = () => { if (!rows.length){ crewWise(); return; } crewWise(); crewwSumToggle(true); };
@@ -1538,7 +1361,7 @@ $("dateBack").onclick = () => { showDate(false); if (rows.length) renderDash(Obj
 $("doneBack").onclick = () => { showDone(false); if (rows.length) renderDash(Object.keys(rows[0])); };
 $("consCli").onchange = consolidate;
 $("consBack").onclick = () => { showCons(false); if (rows.length) renderDash(Object.keys(rows[0])); };
-$("dType").onchange = () => { updateHead(); $("dAbnW").classList.toggle("hide", $("dType").value !== "FSD AMBUSH"); $("dCli").value = ""; $("dGroup").value = ""; $("consCli").value = "";
+$("dType").onchange = () => { updateHead(); $("dCli").value = ""; $("dGroup").value = ""; $("consCli").value = "";
   const wasCons = CONS_ON, wasHq = HQ_ON, wasDate = DATE_ON, wasCliw = CLIW_ON; loadDash().then(() => { if (wasCons) consolidate(); if (wasHq) hqWise(); if (wasDate) dateWise(); if (wasCliw) cliWise(); }); };
 loadCrew();
 ["dFrom","dTo"].forEach(id => $(id).oninput = () => { refresh(); loadTicker(); });
